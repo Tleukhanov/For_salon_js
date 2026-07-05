@@ -1,0 +1,520 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #c4918a;
+  --primary-dark: #a8706a;
+  --accent: #c9a96e;
+  --bg: #faf6f5;
+  --card-bg: #ffffff;
+  --text: #3d2c2a;
+  --text-light: #7a6360;
+  --border: #e8dcd9;
+  --success: #6aaf6a;
+  --error: #c95a5a;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius: 12px;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.hero-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.hero p {
+  font-size: 1.1rem;
+  color: var(--text-light);
+  margin-bottom: 32px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Steps header */
+.steps-header {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.step-dot.active {
+  background: var(--primary);
+}
+
+.step-dot.done {
+  background: var(--success);
+}
+
+/* Step panels */
+.step-panel {
+  display: none;
+}
+
+.step-panel.active {
+  display: block;
+}
+
+.step-panel h2 {
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+}
+
+/* Cards grid */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  border-color: var(--primary);
+}
+
+.card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(196, 145, 138, 0.2);
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.card-sub {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.card-price {
+  font-size: 0.9rem;
+  color: var(--primary-dark);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--card-bg);
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+}
+
+/* Slots grid */
+.slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.slot {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  background: var(--card-bg);
+}
+
+.slot:hover {
+  border-color: var(--primary);
+}
+
+.slot.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Nav buttons */
+.nav-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.nav-btns .btn {
+  flex: 1;
+}
+
+/* Success screen */
+.success-screen {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.success-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.success-screen h2 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.success-details {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 20px 0;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+
+.success-details p {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.success-details p:last-child {
+  margin-bottom: 0;
+}
+
+/* Messages */
+.error-msg {
+  background: #fde8e8;
+  color: var(--error);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  display: none;
+}
+
+.error-msg.show {
+  display: block;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-light);
+}
+
+/* Date input */
+input[type="date"] {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+}
+
+input[type="date"]:focus {
+  border-color: var(--primary);
+}
+
+/* Checkbox-like card selection */
+.card input[type="radio"] {
+  display: none;
+}
+
+/* Admin */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.admin-header h1 {
+  font-size: 1.4rem;
+}
+
+.admin-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.admin-master-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-master-row:last-child {
+  border-bottom: none;
+}
+
+.admin-master-name {
+  font-weight: 600;
+}
+
+.admin-master-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-master-actions .btn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
+.admin-form-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admin-form-row input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+}
+
+.admin-form-row input:focus {
+  border-color: var(--primary);
+}
+
+.admin-form-row .btn {
+  white-space: nowrap;
+}
+
+.admin-row {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-row .form-group {
+  flex: 1;
+}
+
+/* Admin tables */
+.admin-table {
+  width: 100%;
+  font-size: 0.85rem;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 4px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-light);
+  font-size: 0.8rem;
+}
+
+.admin-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-badge.active {
+  background: #e6f4e6;
+  color: var(--success);
+}
+
+.admin-badge.inactive {
+  background: #fde8e8;
+  color: var(--error);
+}
+
+.admin-empty {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  padding: 12px 0;
+}
+
+/* Unavail item */
+.unavail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.unavail-item:last-child {
+  border-bottom: none;
+}
+
+.unavail-item .btn {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .container {
+    max-width: 600px;
+  }
+
+  .slots {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+}

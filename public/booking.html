@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Запись — Салон красоты Бьюти</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="steps-header" id="stepsHeader">
+      <div class="step-dot active" data-step="1"></div>
+      <div class="step-dot" data-step="2"></div>
+      <div class="step-dot" data-step="3"></div>
+      <div class="step-dot" data-step="4"></div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Step 1: Мастер -->
+    <div class="step-panel active" data-step="1">
+      <h2>Выберите мастера</h2>
+      <div class="loading" id="mastersLoading">Загрузка мастеров...</div>
+      <div class="cards" id="mastersList"></div>
+      <div class="nav-btns">
+        <button class="btn btn-primary btn-block" id="toStep2" disabled>Далее</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Услуга -->
+    <div class="step-panel" data-step="2">
+      <h2>Выберите услугу</h2>
+      <div class="loading" id="servicesLoading">Загрузка услуг...</div>
+      <div class="cards" id="servicesList"></div>
+      <div class="nav-btns">
+        <button class="btn btn-secondary" id="backTo1">Назад</button>
+        <button class="btn btn-primary" id="toStep3" disabled>Далее</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Дата и время -->
+    <div class="step-panel" data-step="3">
+      <h2>Выберите дату и время</h2>
+      <input type="date" id="dateInput">
+      <div class="loading" id="slotsLoading" style="display:none">Загрузка свободного времени...</div>
+      <div class="slots" id="slotsList"></div>
+      <div id="noSlots" style="display:none;color:var(--text-light);margin-bottom:16px">На эту дату нет свободных слотов</div>
+      <div class="nav-btns">
+        <button class="btn btn-secondary" id="backTo2">Назад</button>
+        <button class="btn btn-primary" id="toStep4" disabled>Далее</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Контактные данные -->
+    <div class="step-panel" data-step="4">
+      <h2>Ваши контакты</h2>
+      <div class="form-group">
+        <label for="clientName">Имя</label>
+        <input type="text" id="clientName" placeholder="Введите ваше имя">
+      </div>
+      <div class="form-group">
+        <label for="clientPhone">Телефон</label>
+        <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
+      </div>
+      <div class="nav-btns">
+        <button class="btn btn-secondary" id="backTo3">Назад</button>
+        <button class="btn btn-primary" id="confirmBooking" disabled>Подтвердить запись</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Успех -->
+    <div class="step-panel" data-step="5">
+      <div class="success-screen">
+        <div class="success-icon">✓</div>
+        <h2>Вы записаны!</h2>
+        <div class="success-details" id="successDetails"></div>
+        <button class="btn btn-danger btn-block" id="cancelBookingBtn">Отменить запись</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Отменено -->
+    <div class="step-panel" data-step="6">
+      <div class="success-screen">
+        <div class="success-icon">✕</div>
+        <h2>Запись отменена</h2>
+        <p style="color:var(--text-light);margin-bottom:24px">Если хотите, можете записаться снова</p>
+        <a href="/booking.html" class="btn btn-primary btn-block">Записаться снова</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/booking.js"></script>
+</body>
+</html>

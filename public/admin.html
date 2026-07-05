@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ — Салон красоты Бьюти</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Login -->
+    <div id="loginScreen">
+      <div class="admin-header">
+        <h1>Панель администратора</h1>
+      </div>
+      <p style="color:var(--text-light);margin-bottom:20px">Введите пароль для входа</p>
+      <div class="error-msg" id="loginError"></div>
+      <div class="form-group">
+        <label for="passwordInput">Пароль</label>
+        <input type="password" id="passwordInput" placeholder="Введите пароль">
+      </div>
+      <button class="btn btn-primary btn-block" id="loginBtn">Войти</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display:none">
+      <div class="admin-header">
+        <h1>Панель администратора</h1>
+        <button class="btn btn-secondary" id="logoutBtn">Выйти</button>
+      </div>
+
+      <div class="error-msg" id="dashError"></div>
+
+      <!-- Masters -->
+      <section class="admin-section">
+        <h2>Мастера</h2>
+        <div id="mastersList"></div>
+        <div class="admin-form-row">
+          <input type="text" id="newMasterName" placeholder="Имя нового мастера">
+          <button class="btn btn-primary" id="addMasterBtn">Добавить</button>
+        </div>
+      </section>
+
+      <!-- Block time (shown per master) -->
+      <section class="admin-section" id="blockSection" style="display:none">
+        <h2>Заблокировать время <span id="blockMasterName"></span></h2>
+        <div class="form-group">
+          <label>Дата</label>
+          <input type="date" id="blockDate">
+        </div>
+        <div class="admin-row">
+          <div class="form-group">
+            <label>С</label>
+            <input type="time" id="blockStart">
+          </div>
+          <div class="form-group">
+            <label>По</label>
+            <input type="time" id="blockEnd">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Причина (необязательно)</label>
+          <input type="text" id="blockReason" placeholder="Отпуск, больничный...">
+        </div>
+        <div class="nav-btns">
+          <button class="btn btn-secondary" id="blockCancelBtn">Отмена</button>
+          <button class="btn btn-primary" id="blockSaveBtn">Заблокировать</button>
+        </div>
+      </section>
+
+      <!-- Unavailability list -->
+      <section class="admin-section">
+        <h2>Блокировки времени</h2>
+        <div id="unavailList">Загрузка...</div>
+      </section>
+
+      <!-- Bookings -->
+      <section class="admin-section">
+        <h2>Записи клиентов</h2>
+        <div id="bookingsList">Загрузка...</div>
+      </section>
+    </div>
+
+  </div>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
