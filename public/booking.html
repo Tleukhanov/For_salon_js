@@ -7,7 +7,14 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <div class="page-decor">
+    <img src="https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&q=80" alt="" class="page-decor-img page-decor-tl" aria-hidden="true">
+    <img src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&q=80" alt="" class="page-decor-img page-decor-br" aria-hidden="true">
+  </div>
+
   <div class="container">
+    <a href="/" class="back-link">&larr; На главную</a>
+
     <div class="steps-header" id="stepsHeader">
       <div class="step-dot active" data-step="1"></div>
       <div class="step-dot" data-step="2"></div>
@@ -20,6 +27,7 @@
     <!-- Step 1: Мастер -->
     <div class="step-panel active" data-step="1">
       <h2>Выберите мастера</h2>
+      <p class="step-hint">Наши специалисты подберут идеальный образ для вас</p>
       <div class="loading" id="mastersLoading">Загрузка мастеров...</div>
       <div class="cards" id="mastersList"></div>
       <div class="nav-btns">
@@ -30,6 +38,7 @@
     <!-- Step 2: Услуга -->
     <div class="step-panel" data-step="2">
       <h2>Выберите услугу</h2>
+      <p class="step-hint">Широкий спектр процедур для вашего совершенства</p>
       <div class="loading" id="servicesLoading">Загрузка услуг...</div>
       <div class="cards" id="servicesList"></div>
       <div class="nav-btns">
@@ -41,10 +50,38 @@
     <!-- Step 3: Дата и время -->
     <div class="step-panel" data-step="3">
       <h2>Выберите дату и время</h2>
-      <input type="date" id="dateInput">
-      <div class="loading" id="slotsLoading" style="display:none">Загрузка свободного времени...</div>
-      <div class="slots" id="slotsList"></div>
-      <div id="noSlots" style="display:none;color:var(--text-light);margin-bottom:16px">На эту дату нет свободных слотов</div>
+      <p class="step-hint">Найдите удобный слот в календаре</p>
+
+      <button class="btn btn-accent btn-block btn-nearest" id="nearestSlotBtn">
+        <span class="btn-nearest-icon">&#9889;</span>
+        Ближайшее свободное время
+      </button>
+
+      <div class="calendar-wrapper">
+        <div class="calendar-nav">
+          <button class="btn btn-secondary btn-sm" id="calPrev">&larr;</button>
+          <span class="calendar-title" id="calTitle"></span>
+          <button class="btn btn-secondary btn-sm" id="calNext">&rarr;</button>
+        </div>
+        <div class="calendar">
+          <div class="calendar-header">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+          </div>
+          <div class="calendar-body" id="calBody"></div>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot legend-available"></span> Есть свободные</span>
+          <span class="legend-item"><span class="legend-dot legend-busy"></span> Нет мест</span>
+        </div>
+      </div>
+
+      <div class="slots-section" id="slotsSection" style="display:none">
+        <h3 class="slots-date-label" id="slotsDateLabel"></h3>
+        <div class="loading" id="slotsLoading" style="display:none">Загрузка свободного времени...</div>
+        <div class="slots" id="slotsList"></div>
+        <div id="noSlots" style="display:none" class="no-slots-msg">На эту дату нет свободных слотов</div>
+      </div>
+
       <div class="nav-btns">
         <button class="btn btn-secondary" id="backTo2">Назад</button>
         <button class="btn btn-primary" id="toStep4" disabled>Далее</button>
@@ -54,6 +91,7 @@
     <!-- Step 4: Контактные данные -->
     <div class="step-panel" data-step="4">
       <h2>Ваши контакты</h2>
+      <div class="booking-summary" id="bookingSummary"></div>
       <div class="form-group">
         <label for="clientName">Имя</label>
         <input type="text" id="clientName" placeholder="Введите ваше имя">
@@ -71,7 +109,9 @@
     <!-- Step 5: Успех -->
     <div class="step-panel" data-step="5">
       <div class="success-screen">
-        <div class="success-icon">✓</div>
+        <div class="success-circle">
+          <div class="success-icon">&#10003;</div>
+        </div>
         <h2>Вы записаны!</h2>
         <div class="success-details" id="successDetails"></div>
         <button class="btn btn-danger btn-block" id="cancelBookingBtn">Отменить запись</button>
@@ -81,7 +121,9 @@
     <!-- Step 6: Отменено -->
     <div class="step-panel" data-step="6">
       <div class="success-screen">
-        <div class="success-icon">✕</div>
+        <div class="success-circle cancel-circle">
+          <div class="success-icon">&#10005;</div>
+        </div>
         <h2>Запись отменена</h2>
         <p style="color:var(--text-light);margin-bottom:24px">Если хотите, можете записаться снова</p>
         <a href="/booking.html" class="btn btn-primary btn-block">Записаться снова</a>

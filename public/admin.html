@@ -7,26 +7,32 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="page-decor">
+    <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&q=80" alt="" class="page-decor-img page-decor-tl" aria-hidden="true">
+    <img src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&q=80" alt="" class="page-decor-img page-decor-br" aria-hidden="true">
+  </div>
+
+  <div class="container container-wide">
 
     <!-- Login -->
     <div id="loginScreen">
-      <div class="admin-header">
+      <div class="admin-login-card">
+        <div class="admin-login-icon">&#128274;</div>
         <h1>Панель администратора</h1>
+        <p style="color:var(--text-light);margin-bottom:24px">Введите пароль для входа</p>
+        <div class="error-msg" id="loginError"></div>
+        <div class="form-group">
+          <label for="passwordInput">Пароль</label>
+          <input type="password" id="passwordInput" placeholder="Введите пароль">
+        </div>
+        <button class="btn btn-primary btn-block" id="loginBtn">Войти</button>
       </div>
-      <p style="color:var(--text-light);margin-bottom:20px">Введите пароль для входа</p>
-      <div class="error-msg" id="loginError"></div>
-      <div class="form-group">
-        <label for="passwordInput">Пароль</label>
-        <input type="password" id="passwordInput" placeholder="Введите пароль">
-      </div>
-      <button class="btn btn-primary btn-block" id="loginBtn">Войти</button>
     </div>
 
     <!-- Dashboard -->
     <div id="dashboard" style="display:none">
       <div class="admin-header">
-        <h1>Панель администратора</h1>
+        <h1>&#9881; Панель администратора</h1>
         <button class="btn btn-secondary" id="logoutBtn">Выйти</button>
       </div>
 
@@ -34,7 +40,7 @@
 
       <!-- Masters -->
       <section class="admin-section">
-        <h2>Мастера</h2>
+        <h2>&#9787; Мастера</h2>
         <div id="mastersList"></div>
         <div class="admin-form-row">
           <input type="text" id="newMasterName" placeholder="Имя нового мастера">
@@ -42,9 +48,38 @@
         </div>
       </section>
 
-      <!-- Block time (shown per master) -->
+      <!-- Services -->
+      <section class="admin-section">
+        <h2>&#10024; Услуги</h2>
+        <div id="servicesList"></div>
+        <div class="admin-service-form" id="serviceForm">
+          <input type="hidden" id="serviceEditId">
+          <div class="admin-row">
+            <div class="form-group">
+              <label>Название</label>
+              <input type="text" id="serviceName" placeholder="Название услуги">
+            </div>
+          </div>
+          <div class="admin-row">
+            <div class="form-group">
+              <label>Цена (&#8381;)</label>
+              <input type="number" id="servicePrice" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label>Длительность (мин)</label>
+              <input type="number" id="serviceDuration" placeholder="60" min="15" max="480" step="15">
+            </div>
+          </div>
+          <div class="nav-btns">
+            <button class="btn btn-secondary" id="serviceCancelBtn" style="display:none">Отмена</button>
+            <button class="btn btn-primary" id="serviceSaveBtn">Добавить услугу</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Block time -->
       <section class="admin-section" id="blockSection" style="display:none">
-        <h2>Заблокировать время <span id="blockMasterName"></span></h2>
+        <h2>&#128274; Заблокировать время <span id="blockMasterName"></span></h2>
         <div class="form-group">
           <label>Дата</label>
           <input type="date" id="blockDate">
@@ -71,14 +106,19 @@
 
       <!-- Unavailability list -->
       <section class="admin-section">
-        <h2>Блокировки времени</h2>
+        <h2>&#128197; Блокировки времени</h2>
         <div id="unavailList">Загрузка...</div>
       </section>
 
-      <!-- Bookings -->
+      <!-- Bookings tabs -->
       <section class="admin-section">
-        <h2>Записи клиентов</h2>
-        <div id="bookingsList">Загрузка...</div>
+        <h2>&#128197; Записи клиентов</h2>
+        <div class="admin-tabs">
+          <button class="admin-tab active" id="tabUpcoming" data-tab="upcoming">Предстоящие</button>
+          <button class="admin-tab" id="tabHistory" data-tab="history">История</button>
+        </div>
+        <div id="upcomingBookings" class="admin-tab-content active">Загрузка...</div>
+        <div id="historyBookings" class="admin-tab-content" style="display:none">Загрузка...</div>
       </section>
     </div>
 

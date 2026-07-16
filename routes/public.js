@@ -4,6 +4,11 @@ const { getDb, saveDb } = require('../db/database');
 
 const router = Router();
 
+const WORK_START = 8;
+const WORK_END = 18;
+const SLOT_STEP_MINUTES = 30;
+const TODAY_BUFFER_MINUTES = 30;
+
 function queryAll(sql, params = []) {
   const db = getDb();
   const stmt = db.prepare(sql);
@@ -19,6 +24,62 @@ function queryAll(sql, params = []) {
 function queryOne(sql, params = []) {
   const rows = queryAll(sql, params);
   return rows.length > 0 ? rows[0] : null;
+}
+
+function isValidDate(str) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(Date.parse(str + 'T00:00:00'));
+}
+
+function isValidTime(str) {
+  return /^\d{2}:\d{2}$/.test(str);
+}
+
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(m) {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+}
+
+function getTodayStr() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${d}`;
+}
+
+function getNowMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function generateCandidateSlots(durationMinutes) {
+  const slots = [];
+  const workStartMin = WORK_START * 60;
+  const workEndMin = WORK_END * 60;
+  for (let m = workStartMin; m < workEndMin; m += SLOT_STEP_MINUTES) {
+    if (m + durationMinutes <= workEndMin) {
+      slots.push(minutesToTime(m));
+    }
+  }
+  return slots;
+}
+
+function isSlotBlocked(slotStartMin, slotEndMin, bookedRanges, unavailRanges) {
+  for (const b of bookedRanges) {
+    if (slotStartMin < b.end && b.start < slotEndMin) return true;
+  }
+  for (const u of unavailRanges) {
+    const uStart = timeToMinutes(u.start_time);
+    const uEnd = timeToMinutes(u.end_time);
+    if (slotStartMin < uEnd && uStart < slotEndMin) return true;
+  }
+  return false;
 }
 
 router.get('/masters', (req, res) => {
@@ -43,40 +104,245 @@ router.get('/services', (req, res) => {
 
 router.get('/slots', (req, res) => {
   try {
-    const { master_id, date } = req.query;
+    const { master_id, date, service_id } = req.query;
 
     if (!master_id || !date) {
       return res.status(400).json({ error: 'Параметры master_id и date обязательны' });
     }
 
-    const bookedTimes = new Set(
-      queryAll(
-        'SELECT booking_time FROM bookings WHERE master_id = ? AND booking_date = ?',
-        [master_id, date]
-      ).map(row => row.booking_time)
+    if (!isValidDate(date)) {
+      return res.status(400).json({ error: 'Некорректный формат даты. Используйте YYYY-MM-DD' });
+    }
+
+    const today = getTodayStr();
+    if (date < today) {
+      return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
+    }
+
+    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
+    if (!master) {
+      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
+    }
+
+    let duration = SLOT_STEP_MINUTES;
+    if (service_id) {
+      const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
+      if (service) {
+        duration = service.duration_minutes;
+      }
+    }
+
+    const candidates = generateCandidateSlots(duration);
+
+    const bookedRows = queryAll(
+      `SELECT b.booking_time, s.duration_minutes
+       FROM bookings b
+       JOIN services s ON s.id = b.service_id
+       WHERE b.master_id = ? AND b.booking_date = ?`,
+      [master_id, date]
     );
+    const bookedRanges = bookedRows.map(r => ({
+      start: timeToMinutes(r.booking_time),
+      end: timeToMinutes(r.booking_time) + r.duration_minutes
+    }));
 
     const unavailRanges = queryAll(
       'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
       [master_id, date]
     );
 
-    const allSlots = [];
-    for (let h = 8; h <= 17; h++) {
-      allSlots.push(`${String(h).padStart(2, '0')}:00`);
-    }
-
-    const availableSlots = allSlots.filter(time => {
-      if (bookedTimes.has(time)) return false;
-      for (const range of unavailRanges) {
-        if (time >= range.start_time && time < range.end_time) return false;
-      }
-      return true;
+    let availableSlots = candidates.filter(time => {
+      const slotStart = timeToMinutes(time);
+      const slotEnd = slotStart + duration;
+      return !isSlotBlocked(slotStart, slotEnd, bookedRanges, unavailRanges);
     });
+
+    if (date === today) {
+      const nowMin = getNowMinutes() + TODAY_BUFFER_MINUTES;
+      availableSlots = availableSlots.filter(time => timeToMinutes(time) >= nowMin);
+    }
 
     res.json(availableSlots);
   } catch (err) {
     console.error('GET /api/slots:', err.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/availability', (req, res) => {
+  try {
+    const { master_id, from, to, service_id } = req.query;
+
+    if (!master_id || !from || !to) {
+      return res.status(400).json({ error: 'Параметры master_id, from, to обязательны' });
+    }
+
+    if (!isValidDate(from) || !isValidDate(to)) {
+      return res.status(400).json({ error: 'Некорректный формат даты' });
+    }
+
+    const today = getTodayStr();
+    const effectiveFrom = from < today ? today : from;
+
+    if (effectiveFrom > to) {
+      return res.json([]);
+    }
+
+    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
+    if (!master) {
+      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
+    }
+
+    let duration = SLOT_STEP_MINUTES;
+    if (service_id) {
+      const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
+      if (service) duration = service.duration_minutes;
+    }
+
+    const allDates = queryAll(
+      `SELECT DISTINCT booking_date AS date FROM bookings
+       WHERE master_id = ? AND booking_date >= ? AND booking_date <= ?`,
+      [master_id, effectiveFrom, to]
+    );
+
+    const allUnavail = queryAll(
+      `SELECT DISTINCT date FROM unavailability
+       WHERE master_id = ? AND date >= ? AND date <= ?`,
+      [master_id, effectiveFrom, to]
+    );
+
+    const bookedDates = new Set(allDates.map(r => r.date));
+    const unavailDates = new Set(allUnavail.map(r => r.date));
+
+    const result = [];
+    const startMs = new Date(effectiveFrom + 'T00:00:00').getTime();
+    const endMs = new Date(to + 'T00:00:00').getTime();
+    for (let ms = startMs; ms <= endMs; ms += 86400000) {
+      const d = new Date(ms);
+      const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const dayOfWeek = d.getDay();
+      const isWeekend = dayOfWeek === 0;
+
+      if (isWeekend) {
+        result.push({ date: ds, has_slots: false, total_slots: 0 });
+        continue;
+      }
+
+      const candidates = generateCandidateSlots(duration);
+
+      let bookedRanges = [];
+      if (bookedDates.has(ds)) {
+        const rows = queryAll(
+          `SELECT b.booking_time, s.duration_minutes
+           FROM bookings b JOIN services s ON s.id = b.service_id
+           WHERE b.master_id = ? AND b.booking_date = ?`,
+          [master_id, ds]
+        );
+        bookedRanges = rows.map(r => ({
+          start: timeToMinutes(r.booking_time),
+          end: timeToMinutes(r.booking_time) + r.duration_minutes
+        }));
+      }
+
+      let unavailRanges = [];
+      if (unavailDates.has(ds)) {
+        unavailRanges = queryAll(
+          'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+          [master_id, ds]
+        );
+      }
+
+      let available = candidates.filter(time => {
+        const s = timeToMinutes(time);
+        const e = s + duration;
+        return !isSlotBlocked(s, e, bookedRanges, unavailRanges);
+      });
+
+      if (ds === today) {
+        const nowMin = getNowMinutes() + TODAY_BUFFER_MINUTES;
+        available = available.filter(time => timeToMinutes(time) >= nowMin);
+      }
+
+      result.push({ date: ds, has_slots: available.length > 0, total_slots: available.length });
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('GET /api/availability:', err.message);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/nearest-slot', (req, res) => {
+  try {
+    const { master_id, service_id, from } = req.query;
+
+    if (!master_id || !service_id) {
+      return res.status(400).json({ error: 'Параметры master_id и service_id обязательны' });
+    }
+
+    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
+    if (!master) {
+      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
+    }
+
+    const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
+    if (!service) {
+      return res.status(400).json({ error: 'Услуга не найдена' });
+    }
+
+    const duration = service.duration_minutes;
+    const today = getTodayStr();
+    const fromDate = from && isValidDate(from) && from >= today ? from : today;
+
+    const maxDays = 60;
+    const startMs = new Date(fromDate + 'T00:00:00').getTime();
+
+    for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
+      const ms = startMs + dayOffset * 86400000;
+      const d = new Date(ms);
+      const dow = d.getDay();
+      if (dow === 0) continue;
+
+      const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+      const candidates = generateCandidateSlots(duration);
+
+      const bookedRows = queryAll(
+        `SELECT b.booking_time, s.duration_minutes
+         FROM bookings b JOIN services s ON s.id = b.service_id
+         WHERE b.master_id = ? AND b.booking_date = ?`,
+        [master_id, ds]
+      );
+      const bookedRanges = bookedRows.map(r => ({
+        start: timeToMinutes(r.booking_time),
+        end: timeToMinutes(r.booking_time) + r.duration_minutes
+      }));
+
+      const unavailRanges = queryAll(
+        'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+        [master_id, ds]
+      );
+
+      let available = candidates.filter(time => {
+        const s = timeToMinutes(time);
+        const e = s + duration;
+        return !isSlotBlocked(s, e, bookedRanges, unavailRanges);
+      });
+
+      if (ds === today) {
+        const nowMin = getNowMinutes() + TODAY_BUFFER_MINUTES;
+        available = available.filter(time => timeToMinutes(time) >= nowMin);
+      }
+
+      if (available.length > 0) {
+        return res.json({ date: ds, time: available[0] });
+      }
+    }
+
+    res.json(null);
+  } catch (err) {
+    console.error('GET /api/nearest-slot:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -89,16 +355,75 @@ router.post('/bookings', (req, res) => {
       return res.status(400).json({ error: 'Все поля обязательны' });
     }
 
+    if (!isValidDate(date)) {
+      return res.status(400).json({ error: 'Некорректный формат даты' });
+    }
+
+    if (!isValidTime(time)) {
+      return res.status(400).json({ error: 'Некорректный формат времени' });
+    }
+
+    const today = getTodayStr();
+    if (date < today) {
+      return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
+    }
+
+    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
+    if (!master) {
+      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
+    }
+
+    const service = queryOne('SELECT id, duration_minutes FROM services WHERE id = ?', [service_id]);
+    if (!service) {
+      return res.status(400).json({ error: 'Услуга не найдена' });
+    }
+
+    const slotStart = timeToMinutes(time);
+    const slotEnd = slotStart + service.duration_minutes;
+
+    if (slotStart < WORK_START * 60 || slotEnd > WORK_END * 60) {
+      return res.status(400).json({ error: 'Время записи вне рабочих часов' });
+    }
+
+    if (date === today) {
+      const nowMin = getNowMinutes() + TODAY_BUFFER_MINUTES;
+      if (slotStart < nowMin) {
+        return res.status(400).json({ error: 'Это время уже прошло' });
+      }
+    }
+
+    const bookedRows = queryAll(
+      `SELECT b.booking_time, s.duration_minutes
+       FROM bookings b JOIN services s ON s.id = b.service_id
+       WHERE b.master_id = ? AND b.booking_date = ?`,
+      [master_id, date]
+    );
+    const bookedRanges = bookedRows.map(r => ({
+      start: timeToMinutes(r.booking_time),
+      end: timeToMinutes(r.booking_time) + r.duration_minutes
+    }));
+
+    const unavailRanges = queryAll(
+      'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+      [master_id, date]
+    );
+
+    if (isSlotBlocked(slotStart, slotEnd, bookedRanges, unavailRanges)) {
+      return res.status(409).json({ error: 'Это время уже занято, выберите другое' });
+    }
+
     const db = getDb();
     const cancel_token = crypto.randomUUID();
 
     try {
       db.run(
         'INSERT INTO bookings (master_id, service_id, booking_date, booking_time, client_name, client_phone, cancel_token) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [master_id, service_id, date, time, client_name, client_phone, cancel_token]
+        [master_id, service_id, date, time, client_name.trim(), client_phone.trim(), cancel_token]
       );
-      const idResult = db.exec('SELECT last_insert_rowid()');
-      const id = idResult[0].values[0][0];
+      const stmt = db.prepare('SELECT last_insert_rowid() AS id');
+      stmt.step();
+      const id = stmt.getAsObject().id;
+      stmt.free();
       saveDb();
 
       res.status(201).json({ id, cancel_token });
