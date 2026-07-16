@@ -1208,7 +1208,7 @@ body {
   }
 }
 
-/* ==================== REDUCED MOTION ==================== */
+/* ==================== REDUCED MOTION ===================== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
