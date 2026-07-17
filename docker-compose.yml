@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: forsalon
+      POSTGRES_USER: forsalon
+      POSTGRES_PASSWORD: forsalon_secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forsalon"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://forsalon:forsalon_secret@db:5432/forsalon
+      ADMIN_PASSWORD: changeme
+      SESSION_SECRET: supersecret
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

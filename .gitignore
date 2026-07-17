@@ -1,3 +1,8 @@
 node_modules/
 .env
 *.db
+_test*.js
+_seed*.js
+seed.js
+server_out.txt
+server_err.txt

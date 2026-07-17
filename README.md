@@ -2,11 +2,12 @@
 
 # 💅 Салон Красоты «Бьюти»
 
-Премиальный сайт-визитка салона красоты с онлайн-записью, календарём занятости, панелью администратора и современным интерфейсом. Полноценный MVP на Node.js + Express + SQLite.
+Премиальный сайт-визитка салона красоты с онлайн-записью, календарём занятости, панелью администратора и современным интерфейсом. MVP на Node.js + Express + PostgreSQL (SQLite fallback для локальной разработки).
 
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-sql.js-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-sql.js_(fallback)-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![HTML5](https://img.shields.io/badge/HTML5-Clean-semantic-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-Animations-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![Vanilla JS](https://img.shields.io/badge/JavaScript-Vanilla-F7DF1E?style=for-the-badge&logo=javascript&logoColor=white)
@@ -37,7 +38,7 @@
 |---|---|
 | Язык | JavaScript (Node.js 22+) |
 | Фреймворк | [Express.js](https://expressjs.com/) v4.x |
-| База данных | SQLite через [sql.js](https://github.com/sql-js/sql.js) |
+| База данных | PostgreSQL ( продакшен ) / SQLite sql.js ( локальная разработка ) |
 | Фронтенд | Vanilla HTML5 / CSS3 / JS |
 | Аутентификация | express-session + cookie-parser |
 | Деплой | Railway / VPS / Docker |
@@ -46,6 +47,15 @@
 
 ## ⚡ Быстрый старт
 
+### Docker (рекомендуется)
+```bash
+git clone https://github.com/Tleukhanov/forsalon.git
+cd forsalon
+docker compose up -d
+```
+Сервер: `http://localhost:3000` | PostgreSQL на порту `5432`
+
+### Локально (SQLite fallback)
 1. **Клонируй репозиторий:**
    ```bash
    git clone https://github.com/Tleukhanov/forsalon.git
@@ -84,7 +94,9 @@
 forsalon/
 ├── server.js               # Точка входа, Express-сервер
 ├── db/
-│   └── database.js         # Инициализация SQLite, схема, save/load
+│   ├── database.js         # Двойной движок PG + SQLite, миграции
+│   └── migrations/
+│       └── 001_init.sql    # PostgreSQL схема
 ├── middleware/
 │   └── auth.js             # requireAdmin middleware
 ├── routes/
@@ -97,9 +109,11 @@ forsalon/
 │   ├── css/style.css       # Полный дизайн + анимации
 │   ├── js/booking.js       # Логика записи (календарь, слоты, конфетти)
 │   └── js/admin.js         # Логика админки (CRUD, вкладки)
+├── Dockerfile              # Docker образ приложения
+├── docker-compose.yml      # Docker Compose: app + PostgreSQL
 ├── .env                    # Секреты (не коммитится)
 ├── package.json
-└── salon.db                # SQLite база данных (автосоздание)
+└── salon.db                # SQLite база данных (автосоздание, только локально)
 ```
 
 ---
@@ -154,7 +168,6 @@ forsalon/
 
 | Приоритет | Фича | Описание |
 |---|---|---|
-| 🔴 Высокий | **PostgreSQL** | Миграция с sql.js на полноценную БД для продакшена |
 | 🔴 Высокий | **SMS / Email уведомления** | Напоминание за 1 час до записи через Twilio / SendGrid |
 | 🔴 Высокий | **Личный кабинет клиента** | Регистрация, история записей, повторная запись |
 | 🟡 Средний | **Онлайн-оплата** | Интеграция с ЮKassa / Stripe |
@@ -169,12 +182,14 @@ forsalon/
 
 ## 🚢 Деплой
 
-### Railway (бесплатно)
-1. Залей на GitHub
-2. Создай **New Web Service** на [railway.app](https://railway.app)
-3. Подключи репозиторий
-4. Build: `npm install` | Start: `npm start`
-5. Добавь переменные `PORT`, `ADMIN_PASSWORD`, `SESSION_SECRET`
+### Docker (рекомендуется)
+```bash
+# На сервере
+git clone https://github.com/Tleukhanov/forsalon.git
+cd forsalon
+# Настрой пароли в docker-compose.yml или .env
+docker compose up -d
+```
 
 ### VPS (DigitalOcean / Hetzner)
 ```bash
@@ -188,15 +203,14 @@ pm2 save
 pm2 startup
 ```
 
-### Docker
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --production
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
+### Docker (standalone)
+```bash
+docker build -t forsalon .
+docker run -d -p 3000:3000 \
+  -e DATABASE_URL=postgres://user:pass@host:5432/db \
+  -e ADMIN_PASSWORD=secret \
+  -e SESSION_SECRET=secret \
+  --name forsalon forsalon
 ```
 
 ---

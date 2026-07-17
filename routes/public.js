@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const crypto = require('crypto');
-const { getDb, saveDb } = require('../db/database');
+const db = require('../db/database');
 
 const router = Router();
 
@@ -9,67 +9,40 @@ const WORK_END = 18;
 const SLOT_STEP_MINUTES = 30;
 const TODAY_BUFFER_MINUTES = 30;
 
-function queryAll(sql, params = []) {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  if (params.length > 0) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
-}
-
-function queryOne(sql, params = []) {
-  const rows = queryAll(sql, params);
-  return rows.length > 0 ? rows[0] : null;
-}
+/* DB-agnostic helpers */
+function activeWhere() { return db.isPg() ? 'active = TRUE' : 'active = 1'; }
+function timeCol(c) { return db.isPg() ? `${c}::text` : c; }
+function dateCol(c) { return db.isPg() ? `${c}::text` : c; }
 
 function isValidDate(str) {
   return /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(Date.parse(str + 'T00:00:00'));
 }
-
 function isValidTime(str) {
   return /^\d{2}:\d{2}$/.test(str);
 }
-
 function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
+  const s = String(t).substring(0, 5);
+  const [h, m] = s.split(':').map(Number);
   return h * 60 + m;
 }
-
-function minutesToTime(m) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
-}
-
 function getTodayStr() {
   const now = new Date();
-  const y = now.getFullYear();
-  const mo = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${mo}-${d}`;
+  return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 }
-
 function getNowMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
 }
-
 function generateCandidateSlots(durationMinutes) {
   const slots = [];
-  const workStartMin = WORK_START * 60;
   const workEndMin = WORK_END * 60;
-  for (let m = workStartMin; m < workEndMin; m += SLOT_STEP_MINUTES) {
+  for (let m = WORK_START * 60; m < workEndMin; m += SLOT_STEP_MINUTES) {
     if (m + durationMinutes <= workEndMin) {
-      slots.push(minutesToTime(m));
+      slots.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
     }
   }
   return slots;
 }
-
 function isSlotBlocked(slotStartMin, slotEndMin, bookedRanges, unavailRanges) {
   for (const b of bookedRanges) {
     if (slotStartMin < b.end && b.start < slotEndMin) return true;
@@ -81,10 +54,13 @@ function isSlotBlocked(slotStartMin, slotEndMin, bookedRanges, unavailRanges) {
   }
   return false;
 }
+function parseTime(v) { return String(v).substring(0, 5); }
 
-router.get('/masters', (req, res) => {
+/* ===================== ROUTES ===================== */
+
+router.get('/masters', async (req, res) => {
   try {
-    const masters = queryAll('SELECT id, name FROM masters WHERE active = 1');
+    const masters = await db.queryAll(`SELECT id, name FROM masters WHERE ${activeWhere()}`);
     res.json(masters);
   } catch (err) {
     console.error('GET /api/masters:', err.message);
@@ -92,9 +68,9 @@ router.get('/masters', (req, res) => {
   }
 });
 
-router.get('/services', (req, res) => {
+router.get('/services', async (req, res) => {
   try {
-    const services = queryAll('SELECT id, name, price, duration_minutes FROM services');
+    const services = await db.queryAll('SELECT id, name, price, duration_minutes FROM services');
     res.json(services);
   } catch (err) {
     console.error('GET /api/services:', err.message);
@@ -102,59 +78,47 @@ router.get('/services', (req, res) => {
   }
 });
 
-router.get('/slots', (req, res) => {
+router.get('/slots', async (req, res) => {
   try {
     const { master_id, date, service_id } = req.query;
-
-    if (!master_id || !date) {
-      return res.status(400).json({ error: 'Параметры master_id и date обязательны' });
-    }
-
-    if (!isValidDate(date)) {
-      return res.status(400).json({ error: 'Некорректный формат даты. Используйте YYYY-MM-DD' });
-    }
+    if (!master_id || !date) return res.status(400).json({ error: 'Параметры master_id и date обязательны' });
+    if (!isValidDate(date)) return res.status(400).json({ error: 'Некорректный формат даты. Используйте YYYY-MM-DD' });
 
     const today = getTodayStr();
-    if (date < today) {
-      return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
-    }
+    if (date < today) return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
 
-    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
-    if (!master) {
-      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
-    }
+    const master = await db.queryOne(`SELECT id FROM masters WHERE id = $1 AND ${activeWhere()}`, [master_id]);
+    if (!master) return res.status(400).json({ error: 'Мастер не найден или неактивен' });
 
     let duration = SLOT_STEP_MINUTES;
     if (service_id) {
-      const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
-      if (service) {
-        duration = service.duration_minutes;
-      }
+      const service = await db.queryOne('SELECT duration_minutes FROM services WHERE id = $1', [service_id]);
+      if (!service) return res.status(400).json({ error: 'Услуга не найдена' });
+      duration = service.duration_minutes;
     }
 
     const candidates = generateCandidateSlots(duration);
 
-    const bookedRows = queryAll(
-      `SELECT b.booking_time, s.duration_minutes
-       FROM bookings b
-       JOIN services s ON s.id = b.service_id
-       WHERE b.master_id = ? AND b.booking_date = ?`,
+    const bookedRows = await db.queryAll(
+      `SELECT ${timeCol('b.booking_time')} AS booking_time, s.duration_minutes
+       FROM bookings b JOIN services s ON s.id = b.service_id
+       WHERE b.master_id = $1 AND b.booking_date = $2`,
       [master_id, date]
     );
     const bookedRanges = bookedRows.map(r => ({
-      start: timeToMinutes(r.booking_time),
-      end: timeToMinutes(r.booking_time) + r.duration_minutes
+      start: timeToMinutes(parseTime(r.booking_time)),
+      end: timeToMinutes(parseTime(r.booking_time)) + r.duration_minutes
     }));
 
-    const unavailRanges = queryAll(
-      'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+    const unavailRanges = await db.queryAll(
+      `SELECT ${timeCol('start_time')} AS start_time, ${timeCol('end_time')} AS end_time
+       FROM unavailability WHERE master_id = $1 AND date = $2`,
       [master_id, date]
     );
 
     let availableSlots = candidates.filter(time => {
       const slotStart = timeToMinutes(time);
-      const slotEnd = slotStart + duration;
-      return !isSlotBlocked(slotStart, slotEnd, bookedRanges, unavailRanges);
+      return !isSlotBlocked(slotStart, slotStart + duration, bookedRanges, unavailRanges);
     });
 
     if (date === today) {
@@ -169,50 +133,38 @@ router.get('/slots', (req, res) => {
   }
 });
 
-router.get('/availability', (req, res) => {
+router.get('/availability', async (req, res) => {
   try {
     const { master_id, from, to, service_id } = req.query;
-
-    if (!master_id || !from || !to) {
-      return res.status(400).json({ error: 'Параметры master_id, from, to обязательны' });
-    }
-
-    if (!isValidDate(from) || !isValidDate(to)) {
-      return res.status(400).json({ error: 'Некорректный формат даты' });
-    }
+    if (!master_id || !from || !to) return res.status(400).json({ error: 'Параметры master_id, from, to обязательны' });
+    if (!isValidDate(from) || !isValidDate(to)) return res.status(400).json({ error: 'Некорректный формат даты' });
 
     const today = getTodayStr();
     const effectiveFrom = from < today ? today : from;
+    if (effectiveFrom > to) return res.json([]);
 
-    if (effectiveFrom > to) {
-      return res.json([]);
-    }
-
-    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
-    if (!master) {
-      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
-    }
+    const master = await db.queryOne(`SELECT id FROM masters WHERE id = $1 AND ${activeWhere()}`, [master_id]);
+    if (!master) return res.status(400).json({ error: 'Мастер не найден или неактивен' });
 
     let duration = SLOT_STEP_MINUTES;
     if (service_id) {
-      const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
+      const service = await db.queryOne('SELECT duration_minutes FROM services WHERE id = $1', [service_id]);
       if (service) duration = service.duration_minutes;
     }
 
-    const allDates = queryAll(
-      `SELECT DISTINCT booking_date AS date FROM bookings
-       WHERE master_id = ? AND booking_date >= ? AND booking_date <= ?`,
+    const allDates = await db.queryAll(
+      `SELECT DISTINCT ${dateCol('booking_date')} AS date FROM bookings
+       WHERE master_id = $1 AND booking_date >= $2 AND booking_date <= $3`,
+      [master_id, effectiveFrom, to]
+    );
+    const allUnavail = await db.queryAll(
+      `SELECT DISTINCT ${dateCol('date')} AS date FROM unavailability
+       WHERE master_id = $1 AND date >= $2 AND date <= $3`,
       [master_id, effectiveFrom, to]
     );
 
-    const allUnavail = queryAll(
-      `SELECT DISTINCT date FROM unavailability
-       WHERE master_id = ? AND date >= ? AND date <= ?`,
-      [master_id, effectiveFrom, to]
-    );
-
-    const bookedDates = new Set(allDates.map(r => r.date));
-    const unavailDates = new Set(allUnavail.map(r => r.date));
+    const bookedDates = new Set(allDates.map(r => String(r.date).substring(0, 10)));
+    const unavailDates = new Set(allUnavail.map(r => String(r.date).substring(0, 10)));
 
     const result = [];
     const startMs = new Date(effectiveFrom + 'T00:00:00').getTime();
@@ -220,10 +172,8 @@ router.get('/availability', (req, res) => {
     for (let ms = startMs; ms <= endMs; ms += 86400000) {
       const d = new Date(ms);
       const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-      const dayOfWeek = d.getDay();
-      const isWeekend = dayOfWeek === 0;
 
-      if (isWeekend) {
+      if (d.getDay() === 0) {
         result.push({ date: ds, has_slots: false, total_slots: 0 });
         continue;
       }
@@ -232,30 +182,30 @@ router.get('/availability', (req, res) => {
 
       let bookedRanges = [];
       if (bookedDates.has(ds)) {
-        const rows = queryAll(
-          `SELECT b.booking_time, s.duration_minutes
+        const rows = await db.queryAll(
+          `SELECT ${timeCol('b.booking_time')} AS booking_time, s.duration_minutes
            FROM bookings b JOIN services s ON s.id = b.service_id
-           WHERE b.master_id = ? AND b.booking_date = ?`,
+           WHERE b.master_id = $1 AND b.booking_date = $2`,
           [master_id, ds]
         );
         bookedRanges = rows.map(r => ({
-          start: timeToMinutes(r.booking_time),
-          end: timeToMinutes(r.booking_time) + r.duration_minutes
+          start: timeToMinutes(parseTime(r.booking_time)),
+          end: timeToMinutes(parseTime(r.booking_time)) + r.duration_minutes
         }));
       }
 
       let unavailRanges = [];
       if (unavailDates.has(ds)) {
-        unavailRanges = queryAll(
-          'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+        unavailRanges = await db.queryAll(
+          `SELECT ${timeCol('start_time')} AS start_time, ${timeCol('end_time')} AS end_time
+           FROM unavailability WHERE master_id = $1 AND date = $2`,
           [master_id, ds]
         );
       }
 
       let available = candidates.filter(time => {
         const s = timeToMinutes(time);
-        const e = s + duration;
-        return !isSlotBlocked(s, e, bookedRanges, unavailRanges);
+        return !isSlotBlocked(s, s + duration, bookedRanges, unavailRanges);
       });
 
       if (ds === today) {
@@ -273,61 +223,49 @@ router.get('/availability', (req, res) => {
   }
 });
 
-router.get('/nearest-slot', (req, res) => {
+router.get('/nearest-slot', async (req, res) => {
   try {
     const { master_id, service_id, from } = req.query;
+    if (!master_id || !service_id) return res.status(400).json({ error: 'Параметры master_id и service_id обязательны' });
 
-    if (!master_id || !service_id) {
-      return res.status(400).json({ error: 'Параметры master_id и service_id обязательны' });
-    }
+    const master = await db.queryOne(`SELECT id FROM masters WHERE id = $1 AND ${activeWhere()}`, [master_id]);
+    if (!master) return res.status(400).json({ error: 'Мастер не найден или неактивен' });
 
-    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
-    if (!master) {
-      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
-    }
-
-    const service = queryOne('SELECT duration_minutes FROM services WHERE id = ?', [service_id]);
-    if (!service) {
-      return res.status(400).json({ error: 'Услуга не найдена' });
-    }
+    const service = await db.queryOne('SELECT duration_minutes FROM services WHERE id = $1', [service_id]);
+    if (!service) return res.status(400).json({ error: 'Услуга не найдена' });
 
     const duration = service.duration_minutes;
     const today = getTodayStr();
     const fromDate = from && isValidDate(from) && from >= today ? from : today;
-
-    const maxDays = 60;
     const startMs = new Date(fromDate + 'T00:00:00').getTime();
 
-    for (let dayOffset = 0; dayOffset < maxDays; dayOffset++) {
-      const ms = startMs + dayOffset * 86400000;
-      const d = new Date(ms);
-      const dow = d.getDay();
-      if (dow === 0) continue;
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const d = new Date(startMs + dayOffset * 86400000);
+      if (d.getDay() === 0) continue;
 
       const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-
       const candidates = generateCandidateSlots(duration);
 
-      const bookedRows = queryAll(
-        `SELECT b.booking_time, s.duration_minutes
+      const bookedRows = await db.queryAll(
+        `SELECT ${timeCol('b.booking_time')} AS booking_time, s.duration_minutes
          FROM bookings b JOIN services s ON s.id = b.service_id
-         WHERE b.master_id = ? AND b.booking_date = ?`,
+         WHERE b.master_id = $1 AND b.booking_date = $2`,
         [master_id, ds]
       );
       const bookedRanges = bookedRows.map(r => ({
-        start: timeToMinutes(r.booking_time),
-        end: timeToMinutes(r.booking_time) + r.duration_minutes
+        start: timeToMinutes(parseTime(r.booking_time)),
+        end: timeToMinutes(parseTime(r.booking_time)) + r.duration_minutes
       }));
 
-      const unavailRanges = queryAll(
-        'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+      const unavailRanges = await db.queryAll(
+        `SELECT ${timeCol('start_time')} AS start_time, ${timeCol('end_time')} AS end_time
+         FROM unavailability WHERE master_id = $1 AND date = $2`,
         [master_id, ds]
       );
 
       let available = candidates.filter(time => {
         const s = timeToMinutes(time);
-        const e = s + duration;
-        return !isSlotBlocked(s, e, bookedRanges, unavailRanges);
+        return !isSlotBlocked(s, s + duration, bookedRanges, unavailRanges);
       });
 
       if (ds === today) {
@@ -335,9 +273,7 @@ router.get('/nearest-slot', (req, res) => {
         available = available.filter(time => timeToMinutes(time) >= nowMin);
       }
 
-      if (available.length > 0) {
-        return res.json({ date: ds, time: available[0] });
-      }
+      if (available.length > 0) return res.json({ date: ds, time: available[0] });
     }
 
     res.json(null);
@@ -347,111 +283,77 @@ router.get('/nearest-slot', (req, res) => {
   }
 });
 
-router.post('/bookings', (req, res) => {
+router.post('/bookings', async (req, res) => {
   try {
     const { master_id, service_id, date, time, client_name, client_phone } = req.body;
-
     if (!master_id || !service_id || !date || !time || !client_name || !client_phone) {
       return res.status(400).json({ error: 'Все поля обязательны' });
     }
-
-    if (!isValidDate(date)) {
-      return res.status(400).json({ error: 'Некорректный формат даты' });
-    }
-
-    if (!isValidTime(time)) {
-      return res.status(400).json({ error: 'Некорректный формат времени' });
-    }
+    if (!isValidDate(date)) return res.status(400).json({ error: 'Некорректный формат даты' });
+    if (!isValidTime(time)) return res.status(400).json({ error: 'Некорректный формат времени' });
 
     const today = getTodayStr();
-    if (date < today) {
-      return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
-    }
+    if (date < today) return res.status(400).json({ error: 'Нельзя записаться на прошедшую дату' });
 
-    const master = queryOne('SELECT id FROM masters WHERE id = ? AND active = 1', [master_id]);
-    if (!master) {
-      return res.status(400).json({ error: 'Мастер не найден или неактивен' });
-    }
+    const master = await db.queryOne(`SELECT id FROM masters WHERE id = $1 AND ${activeWhere()}`, [master_id]);
+    if (!master) return res.status(400).json({ error: 'Мастер не найден или неактивен' });
 
-    const service = queryOne('SELECT id, duration_minutes FROM services WHERE id = ?', [service_id]);
-    if (!service) {
-      return res.status(400).json({ error: 'Услуга не найдена' });
-    }
+    const service = await db.queryOne('SELECT id, duration_minutes FROM services WHERE id = $1', [service_id]);
+    if (!service) return res.status(400).json({ error: 'Услуга не найдена' });
 
     const slotStart = timeToMinutes(time);
     const slotEnd = slotStart + service.duration_minutes;
-
     if (slotStart < WORK_START * 60 || slotEnd > WORK_END * 60) {
       return res.status(400).json({ error: 'Время записи вне рабочих часов' });
     }
-
     if (date === today) {
-      const nowMin = getNowMinutes() + TODAY_BUFFER_MINUTES;
-      if (slotStart < nowMin) {
+      if (slotStart < getNowMinutes() + TODAY_BUFFER_MINUTES) {
         return res.status(400).json({ error: 'Это время уже прошло' });
       }
     }
 
-    const bookedRows = queryAll(
-      `SELECT b.booking_time, s.duration_minutes
+    const bookedRows = await db.queryAll(
+      `SELECT ${timeCol('b.booking_time')} AS booking_time, s.duration_minutes
        FROM bookings b JOIN services s ON s.id = b.service_id
-       WHERE b.master_id = ? AND b.booking_date = ?`,
+       WHERE b.master_id = $1 AND b.booking_date = $2`,
       [master_id, date]
     );
     const bookedRanges = bookedRows.map(r => ({
-      start: timeToMinutes(r.booking_time),
-      end: timeToMinutes(r.booking_time) + r.duration_minutes
+      start: timeToMinutes(parseTime(r.booking_time)),
+      end: timeToMinutes(parseTime(r.booking_time)) + r.duration_minutes
     }));
-
-    const unavailRanges = queryAll(
-      'SELECT start_time, end_time FROM unavailability WHERE master_id = ? AND date = ?',
+    const unavailRanges = await db.queryAll(
+      `SELECT ${timeCol('start_time')} AS start_time, ${timeCol('end_time')} AS end_time
+       FROM unavailability WHERE master_id = $1 AND date = $2`,
       [master_id, date]
     );
-
     if (isSlotBlocked(slotStart, slotEnd, bookedRanges, unavailRanges)) {
       return res.status(409).json({ error: 'Это время уже занято, выберите другое' });
     }
 
-    const db = getDb();
     const cancel_token = crypto.randomUUID();
-
-    try {
-      db.run(
-        'INSERT INTO bookings (master_id, service_id, booking_date, booking_time, client_name, client_phone, cancel_token) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [master_id, service_id, date, time, client_name.trim(), client_phone.trim(), cancel_token]
-      );
-      const stmt = db.prepare('SELECT last_insert_rowid() AS id');
-      stmt.step();
-      const id = stmt.getAsObject().id;
-      stmt.free();
-      saveDb();
-
-      res.status(201).json({ id, cancel_token });
-    } catch (insertErr) {
-      if (insertErr.message && insertErr.message.includes('UNIQUE constraint')) {
-        return res.status(409).json({ error: 'Это время уже занято, выберите другое' });
-      }
-      throw insertErr;
-    }
+    const result = await db.runSql(
+      `INSERT INTO bookings (master_id, service_id, booking_date, booking_time, client_name, client_phone, cancel_token)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [master_id, service_id, date, time, client_name.trim(), client_phone.trim(), cancel_token]
+    );
+    const id = result.rows && result.rows[0] ? result.rows[0].id : result.lastID;
+    res.status(201).json({ id, cancel_token });
   } catch (err) {
+    if (err.message && (err.message.includes('unique constraint') || err.message.includes('UNIQUE constraint'))) {
+      return res.status(409).json({ error: 'Это время уже занято, выберите другое' });
+    }
     console.error('POST /api/bookings:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-router.delete('/bookings/:cancel_token', (req, res) => {
+router.delete('/bookings/:cancel_token', async (req, res) => {
   try {
     const { cancel_token } = req.params;
-
-    const existing = queryOne('SELECT id FROM bookings WHERE cancel_token = ?', [cancel_token]);
-    if (!existing) {
-      return res.status(404).json({ error: 'Запись не найдена' });
-    }
-
-    const db = getDb();
-    db.run('DELETE FROM bookings WHERE cancel_token = ?', [cancel_token]);
-    saveDb();
-
+    const existing = await db.queryOne('SELECT id FROM bookings WHERE cancel_token = $1', [cancel_token]);
+    if (!existing) return res.status(404).json({ error: 'Запись не найдена' });
+    await db.runSql('DELETE FROM bookings WHERE cancel_token = $1', [cancel_token]);
     res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/bookings:', err.message);
