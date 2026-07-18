@@ -4,10 +4,12 @@ const state = {
   step: 1,
   masterId: null,
   masterName: '',
+  masterAvatar: '',
   serviceId: null,
   serviceName: '',
   servicePrice: 0,
   serviceDuration: 0,
+  serviceIcon: '',
   date: '',
   time: '',
   clientName: '',
@@ -79,10 +81,15 @@ function goToStep(n) {
   $$('.step-panel').forEach(el => el.classList.remove('active'));
   const panel = $(`.step-panel[data-step="${n}"]`);
   panel.classList.add('active');
-  $$('.step-dot').forEach(el => {
+  $$('.step-progress-item').forEach(el => {
     const s = parseInt(el.dataset.step);
     el.classList.toggle('active', s === n);
     el.classList.toggle('done', s < n);
+    const circle = el.querySelector('.step-circle');
+    if (s < n) circle.innerHTML = '&#10003;';
+  });
+  $$('.step-line').forEach((el, i) => {
+    el.classList.toggle('done', i < n - 1);
   });
   hideError();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -108,7 +115,7 @@ async function loadMasters() {
     list.innerHTML = '';
     masters.forEach(m => {
       const label = document.createElement('label');
-      label.className = 'card';
+      label.className = 'card card-master';
       label.dataset.id = m.id;
 
       const input = document.createElement('input');
@@ -116,12 +123,43 @@ async function loadMasters() {
       input.name = 'master';
       input.value = m.id;
 
+      const avatarEl = document.createElement('div');
+      avatarEl.className = 'card-avatar';
+      if (m.avatar_url) {
+        const img = document.createElement('img');
+        img.src = m.avatar_url;
+        img.alt = m.name;
+        img.className = 'card-avatar-img';
+        avatarEl.appendChild(img);
+      } else {
+        avatarEl.textContent = m.name.charAt(0).toUpperCase();
+      }
+
+      const textBlock = document.createElement('div');
+      textBlock.className = 'card-text';
+
       const title = document.createElement('div');
       title.className = 'card-title';
       title.textContent = m.name;
 
+      textBlock.appendChild(title);
+
+      if (m.speciality) {
+        const spec = document.createElement('div');
+        spec.className = 'card-sub card-spec';
+        spec.textContent = m.speciality;
+        textBlock.appendChild(spec);
+      }
+      if (m.description) {
+        const desc = document.createElement('div');
+        desc.className = 'card-sub';
+        desc.textContent = m.description;
+        textBlock.appendChild(desc);
+      }
+
       label.appendChild(input);
-      label.appendChild(title);
+      label.appendChild(avatarEl);
+      label.appendChild(textBlock);
       list.appendChild(label);
 
       label.addEventListener('click', () => {
@@ -130,6 +168,7 @@ async function loadMasters() {
         input.checked = true;
         state.masterId = parseInt(m.id);
         state.masterName = m.name;
+        state.masterAvatar = m.avatar_url || '';
         state.date = '';
         state.time = '';
         state.availabilityCache = {};
@@ -159,7 +198,7 @@ async function loadServices() {
     list.innerHTML = '';
     services.forEach(s => {
       const label = document.createElement('label');
-      label.className = 'card';
+      label.className = 'card card-service';
       label.dataset.id = s.id;
 
       const input = document.createElement('input');
@@ -167,21 +206,49 @@ async function loadServices() {
       input.name = 'service';
       input.value = s.id;
 
+      const iconEl = document.createElement('div');
+      iconEl.className = 'card-service-icon';
+      iconEl.textContent = s.icon || '\u2728';
+
+      const textBlock = document.createElement('div');
+      textBlock.className = 'card-text';
+
       const title = document.createElement('div');
       title.className = 'card-title';
       title.textContent = s.name;
 
-      const sub = document.createElement('div');
-      sub.className = 'card-sub';
-      sub.textContent = s.duration_minutes + ' мин.';
+      textBlock.appendChild(title);
+
+      if (s.description) {
+        const desc = document.createElement('div');
+        desc.className = 'card-sub';
+        desc.textContent = s.description;
+        textBlock.appendChild(desc);
+      }
+
+      const durPrice = document.createElement('div');
+      durPrice.className = 'card-dur-price';
+
+      const durBar = document.createElement('div');
+      durBar.className = 'dur-bar';
+      const durFill = document.createElement('div');
+      durFill.className = 'dur-fill';
+      durFill.style.width = Math.min((s.duration_minutes / 120) * 100, 100) + '%';
+      durBar.appendChild(durFill);
+      const durText = document.createElement('span');
+      durText.className = 'dur-text';
+      durText.textContent = s.duration_minutes + ' мин.';
+      durPrice.appendChild(durBar);
+      durPrice.appendChild(durText);
 
       const price = document.createElement('div');
       price.className = 'card-price';
       price.textContent = s.price.toLocaleString('ru-RU') + ' \u20BD';
 
       label.appendChild(input);
-      label.appendChild(title);
-      label.appendChild(sub);
+      label.appendChild(iconEl);
+      label.appendChild(textBlock);
+      label.appendChild(durPrice);
       label.appendChild(price);
       list.appendChild(label);
 
@@ -193,6 +260,7 @@ async function loadServices() {
         state.serviceName = s.name;
         state.servicePrice = s.price;
         state.serviceDuration = s.duration_minutes;
+        state.serviceIcon = s.icon || '\u2728';
         state.date = '';
         state.time = '';
         state.availabilityCache = {};
@@ -486,20 +554,31 @@ $('#toStep4').addEventListener('click', () => {
 function renderBookingSummary() {
   const el = $('#bookingSummary');
   el.innerHTML = '';
+  el.className = 'booking-summary ticket-card';
+
   const items = [
-    ['Мастер', state.masterName],
-    ['Услуга', state.serviceName + ' (' + state.serviceDuration + ' мин.)'],
-    ['Цена', state.servicePrice.toLocaleString('ru-RU') + ' \u20BD'],
-    ['Дата', formatDateRu(state.date)],
-    ['Время', state.time]
+    ['&#128105;', '\u041C\u0430\u0441\u0442\u0435\u0440', state.masterName],
+    [state.serviceIcon || '&#10024;', '\u0423\u0441\u043B\u0443\u0433\u0430', state.serviceName + ' (' + state.serviceDuration + ' \u043C\u0438\u043D.)'],
+    ['&#128176;', '\u0426\u0435\u043D\u0430', state.servicePrice.toLocaleString('ru-RU') + ' \u20BD'],
+    ['&#128197;', '\u0414\u0430\u0442\u0430', formatDateRu(state.date)],
+    ['&#128336;', '\u0412\u0440\u0435\u043C\u044F', state.time],
   ];
-  items.forEach(([label, value]) => {
-    const p = document.createElement('p');
-    const strong = document.createElement('strong');
-    strong.textContent = label + ': ';
-    p.appendChild(strong);
-    p.appendChild(document.createTextNode(value));
-    el.appendChild(p);
+  items.forEach(([icon, label, value]) => {
+    const row = document.createElement('div');
+    row.className = 'ticket-row';
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'ticket-icon';
+    iconSpan.innerHTML = icon;
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'ticket-label';
+    labelSpan.textContent = label + ': ';
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'ticket-value';
+    valueSpan.textContent = value;
+    row.appendChild(iconSpan);
+    row.appendChild(labelSpan);
+    row.appendChild(valueSpan);
+    el.appendChild(row);
   });
 }
 
@@ -535,21 +614,52 @@ async function submitBooking() {
 
     const details = $('#successDetails');
     details.innerHTML = '';
+    details.className = 'success-details ticket-card';
+
     const items = [
-      ['Мастер', state.masterName],
-      ['Услуга', state.serviceName],
-      ['Цена', state.servicePrice.toLocaleString('ru-RU') + ' \u20BD'],
-      ['Дата', formatDateRu(state.date)],
-      ['Время', state.time]
+      ['&#128105;', '\u041C\u0430\u0441\u0442\u0435\u0440', state.masterName],
+      [state.serviceIcon || '&#10024;', '\u0423\u0441\u043B\u0443\u0433\u0430', state.serviceName],
+      ['&#128176;', '\u0426\u0435\u043D\u0430', state.servicePrice.toLocaleString('ru-RU') + ' \u20BD'],
+      ['&#128197;', '\u0414\u0430\u0442\u0430', formatDateRu(state.date)],
+      ['&#128336;', '\u0412\u0440\u0435\u043C\u044F', state.time]
     ];
-    items.forEach(([label, value]) => {
-      const p = document.createElement('p');
-      const strong = document.createElement('strong');
-      strong.textContent = label + ': ';
-      p.appendChild(strong);
-      p.appendChild(document.createTextNode(value));
-      details.appendChild(p);
+    items.forEach(([icon, label, value]) => {
+      const row = document.createElement('div');
+      row.className = 'ticket-row';
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'ticket-icon';
+      iconSpan.innerHTML = icon;
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'ticket-label';
+      labelSpan.textContent = label + ': ';
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'ticket-value';
+      valueSpan.textContent = value;
+      row.appendChild(iconSpan);
+      row.appendChild(labelSpan);
+      row.appendChild(valueSpan);
+      details.appendChild(row);
     });
+
+    const actions = document.createElement('div');
+    actions.className = 'success-actions';
+
+    const whatsAppBtn = document.createElement('a');
+    const salonPhone = '77756961005';
+    const waText = encodeURIComponent(`Запись в салоне "Бьюти"\n${state.masterName} | ${state.serviceName}\n${formatDateRu(state.date)} в ${state.time}`);
+    whatsAppBtn.href = `https://wa.me/${salonPhone}?text=${waText}`;
+    whatsAppBtn.target = '_blank';
+    whatsAppBtn.className = 'btn btn-success-whatsapp';
+    whatsAppBtn.textContent = '\uD83D\uDCF1 Поделиться в WhatsApp';
+    actions.appendChild(whatsAppBtn);
+
+    const calBtn = document.createElement('button');
+    calBtn.className = 'btn btn-secondary';
+    calBtn.textContent = '\uD83D\uDCC5 Добавить в календарь';
+    calBtn.addEventListener('click', downloadICS);
+    actions.appendChild(calBtn);
+
+    details.appendChild(actions);
 
     goToStep(5);
     launchConfetti();
@@ -568,6 +678,37 @@ async function submitBooking() {
 }
 
 /* Confetti */
+function downloadICS() {
+  const [y, m, d] = state.date.split('-');
+  const [hh, mm] = state.time.split(':');
+  const dtStart = y + m + d + 'T' + hh + mm + '00';
+  const endMin = parseInt(hh) * 60 + parseInt(mm) + state.serviceDuration;
+  const eh = String(Math.floor(endMin / 60)).padStart(2, '0');
+  const em = String(endMin % 60).padStart(2, '0');
+  const dtEnd = y + m + d + 'T' + eh + em + '00';
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ForSalon//Booking//RU',
+    'BEGIN:VEVENT',
+    'DTSTART:' + dtStart,
+    'DTEND:' + dtEnd,
+    'SUMMARY:' + state.serviceName + ' — ' + state.masterName,
+    'DESCRIPTION:Запись в салоне "Бьюти". ' + state.serviceName + ' у ' + state.masterName,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'booking.ics';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function launchConfetti() {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (prefersReduced) return;

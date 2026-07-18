@@ -142,16 +142,48 @@ async function loadMasters() {
       row.className = 'admin-master-row';
 
       const info = document.createElement('div');
+      info.style.display = 'flex';
+      info.style.alignItems = 'center';
+      info.style.gap = '12px';
+      info.style.flex = '1';
 
+      const avatar = document.createElement('div');
+      avatar.className = 'admin-master-avatar';
+      if (m.avatar_url) {
+        const img = document.createElement('img');
+        img.src = m.avatar_url;
+        img.alt = m.name;
+        img.className = 'admin-master-avatar-img';
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = m.name.charAt(0).toUpperCase();
+      }
+
+      const nameBlock = document.createElement('div');
       const nameSpan = document.createElement('span');
       nameSpan.className = 'admin-master-name';
       nameSpan.textContent = m.name;
+      nameBlock.appendChild(nameSpan);
+
+      if (m.speciality) {
+        const spec = document.createElement('span');
+        spec.className = 'admin-master-spec';
+        spec.textContent = m.speciality;
+        nameBlock.appendChild(spec);
+      }
+      if (m.description) {
+        const desc = document.createElement('span');
+        desc.className = 'admin-master-desc';
+        desc.textContent = m.description;
+        nameBlock.appendChild(desc);
+      }
 
       const badge = document.createElement('span');
       badge.className = 'admin-badge ' + (m.active ? 'active' : 'inactive');
       badge.textContent = m.active ? 'Активен' : 'Неактивен';
 
-      info.appendChild(nameSpan);
+      info.appendChild(avatar);
+      info.appendChild(nameBlock);
       info.appendChild(badge);
 
       const actions = document.createElement('div');
@@ -161,7 +193,7 @@ async function loadMasters() {
         const editBtn = document.createElement('button');
         editBtn.className = 'btn btn-secondary';
         editBtn.textContent = 'Ред.';
-        editBtn.addEventListener('click', () => startEditMaster(m.id, m.name));
+        editBtn.addEventListener('click', () => openEditMaster(m));
         actions.appendChild(editBtn);
 
         const blockBtn = document.createElement('button');
@@ -188,18 +220,25 @@ async function loadMasters() {
 }
 
 $('#addMasterBtn').addEventListener('click', addMaster);
-$('#newMasterName').addEventListener('keydown', e => { if (e.key === 'Enter') addMaster(); });
 
 async function addMaster() {
-  const input = $('#newMasterName');
-  const name = input.value.trim();
+  const nameInput = $('#newMasterName');
+  const name = nameInput.value.trim();
   if (!name) return;
   hideError('#dashError');
   const btn = $('#addMasterBtn');
   btn.disabled = true;
   try {
-    await apiPost('/masters', { name });
-    input.value = '';
+    await apiPost('/masters', {
+      name,
+      speciality: $('#newMasterSpec').value.trim(),
+      description: $('#newMasterDesc').value.trim(),
+      avatar_url: $('#newMasterAvatar').value.trim()
+    });
+    nameInput.value = '';
+    $('#newMasterSpec').value = '';
+    $('#newMasterDesc').value = '';
+    $('#newMasterAvatar').value = '';
     await loadMasters();
   } catch (err) {
     if (err.status === 401) return handleUnauthorized();
@@ -209,21 +248,62 @@ async function addMaster() {
   }
 }
 
-function startEditMaster(id, name) {
-  const newName = prompt('Имя мастера:', name);
-  if (newName === null || newName.trim() === '') return;
-  editMaster(id, newName.trim());
-}
+function openEditMaster(m) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
-async function editMaster(id, name) {
-  hideError('#dashError');
-  try {
-    await apiPut('/masters/' + id, { name });
-    await loadMasters();
-  } catch (err) {
-    if (err.status === 401) return handleUnauthorized();
-    showError('#dashError', err.data?.error || 'Ошибка редактирования мастера');
-  }
+  const modal = document.createElement('div');
+  modal.className = 'modal-card';
+
+  modal.innerHTML = `
+    <h3>Редактировать мастера</h3>
+    <div class="form-group">
+      <label>Имя</label>
+      <input type="text" id="editMName" value="${escapeHtml(m.name)}">
+    </div>
+    <div class="form-group">
+      <label>Специальность</label>
+      <input type="text" id="editMSpec" value="${escapeHtml(m.speciality || '')}" placeholder="Например: Мастер маникюра">
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      <input type="text" id="editMDesc" value="${escapeHtml(m.description || '')}" placeholder="Кратко о мастере">
+    </div>
+    <div class="form-group">
+      <label>Фото (URL)</label>
+      <input type="text" id="editMAvatar" value="${escapeHtml(m.avatar_url || '')}" placeholder="https://images.unsplash.com/...">
+      <span class="field-hint">Вставьте ссылку на фото с Unsplash или другого сайта</span>
+    </div>
+    ${m.avatar_url ? `<div class="avatar-preview"><img src="${escapeHtml(m.avatar_url)}" alt="Превью"></div>` : '<div class="avatar-preview avatar-preview-empty">Нет фото</div>'}
+    <div class="nav-btns">
+      <button class="btn btn-secondary" id="editMCancel">Отмена</button>
+      <button class="btn btn-primary" id="editMSave">Сохранить</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#editMCancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#editMSave').addEventListener('click', async () => {
+    const btn = overlay.querySelector('#editMSave');
+    btn.disabled = true;
+    try {
+      await apiPut('/masters/' + m.id, {
+        name: overlay.querySelector('#editMName').value,
+        speciality: overlay.querySelector('#editMSpec').value,
+        description: overlay.querySelector('#editMDesc').value,
+        avatar_url: overlay.querySelector('#editMAvatar').value
+      });
+      overlay.remove();
+      await loadMasters();
+    } catch (err) {
+      if (err.status === 401) return handleUnauthorized();
+      showError('#dashError', err.data?.error || 'Ошибка сохранения');
+      btn.disabled = false;
+    }
+  });
 }
 
 async function deleteMaster(id, name) {
@@ -274,13 +354,19 @@ function renderServices() {
 
     const nameEl = document.createElement('span');
     nameEl.className = 'admin-service-name';
-    nameEl.textContent = s.name;
+    nameEl.textContent = (s.icon ? s.icon + ' ' : '') + s.name;
 
     const meta = document.createElement('span');
     meta.className = 'admin-service-meta';
     meta.textContent = s.price.toLocaleString('ru-RU') + ' \u20BD / ' + s.duration_minutes + ' мин.';
 
     info.appendChild(nameEl);
+    if (s.description) {
+      const descEl = document.createElement('span');
+      descEl.className = 'admin-service-desc';
+      descEl.textContent = s.description;
+      info.appendChild(descEl);
+    }
     info.appendChild(meta);
 
     const actions = document.createElement('div');
@@ -311,11 +397,13 @@ function startEditService(s) {
   $('#serviceName').value = s.name;
   $('#servicePrice').value = s.price;
   $('#serviceDuration').value = s.duration_minutes;
+  $('#serviceIcon').value = s.icon || '';
+  $('#serviceDesc').value = s.description || '';
   $('#serviceSaveBtn').textContent = 'Сохранить';
   show('#serviceCancelBtn');
-  hide('#serviceSaveBtn');
   show('#serviceSaveBtn');
-  $('#serviceSaveBtn').addEventListener('click', saveService, { once: true });
+  $('#serviceSaveBtn').onclick = () => saveService(s.id);
+  $('#serviceSaveBtn').disabled = false;
 }
 
 $('#serviceCancelBtn').addEventListener('click', resetServiceForm);
@@ -325,16 +413,20 @@ function resetServiceForm() {
   $('#serviceName').value = '';
   $('#servicePrice').value = '';
   $('#serviceDuration').value = '';
+  $('#serviceIcon').value = '';
+  $('#serviceDesc').value = '';
   $('#serviceSaveBtn').textContent = 'Добавить услугу';
+  $('#serviceSaveBtn').onclick = null;
   hide('#serviceCancelBtn');
 }
 
-$('#serviceSaveBtn').addEventListener('click', async () => {
+async function saveService(editId) {
   hideError('#dashError');
-  const editId = $('#serviceEditId').value;
   const name = $('#serviceName').value.trim();
   const price = $('#servicePrice').value;
   const duration = $('#serviceDuration').value;
+  const icon = $('#serviceIcon').value.trim();
+  const description = $('#serviceDesc').value.trim();
 
   if (!name) {
     showError('#dashError', 'Введите название услуги');
@@ -353,9 +445,9 @@ $('#serviceSaveBtn').addEventListener('click', async () => {
   btn.disabled = true;
   try {
     if (editId) {
-      await apiPut('/services/' + editId, { name, price: parseInt(price), duration_minutes: parseInt(duration) });
+      await apiPut('/services/' + editId, { name, price: parseInt(price), duration_minutes: parseInt(duration), icon, description });
     } else {
-      await apiPost('/services', { name, price: parseInt(price), duration_minutes: parseInt(duration) });
+      await apiPost('/services', { name, price: parseInt(price), duration_minutes: parseInt(duration), icon, description });
     }
     resetServiceForm();
     await loadServices();
@@ -365,6 +457,11 @@ $('#serviceSaveBtn').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
   }
+}
+
+$('#serviceSaveBtn').addEventListener('click', () => {
+  const editId = $('#serviceEditId').value;
+  saveService(editId || null);
 });
 
 async function deleteService(id, name) {

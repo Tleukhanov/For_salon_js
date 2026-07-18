@@ -44,7 +44,7 @@ router.use(requireAdmin);
 
 router.get('/masters', async (req, res) => {
   try {
-    const masters = await db.queryAll('SELECT id, name, active FROM masters');
+    const masters = await db.queryAll('SELECT id, name, active, avatar_url, description, speciality FROM masters');
     res.json(masters);
   } catch (err) {
     console.error('GET /api/admin/masters:', err.message);
@@ -54,17 +54,17 @@ router.get('/masters', async (req, res) => {
 
 router.post('/masters', async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, avatar_url, description, speciality } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Имя мастера обязательно' });
     const trimmed = name.trim();
     if (trimmed.length > 100) return res.status(400).json({ error: 'Имя слишком длинное' });
 
     const result = await db.runSql(
-      'INSERT INTO masters (name, active) VALUES ($1, $2) RETURNING id',
-      [trimmed, boolVal(true)]
+      'INSERT INTO masters (name, active, avatar_url, description, speciality) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [trimmed, boolVal(true), avatar_url || '', description || '', speciality || '']
     );
     const id = result.rows && result.rows[0] ? result.rows[0].id : null;
-    res.status(201).json({ id, name: trimmed, active: true });
+    res.status(201).json({ id, name: trimmed, active: true, avatar_url: avatar_url || '', description: description || '', speciality: speciality || '' });
   } catch (err) {
     console.error('POST /api/admin/masters:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -74,16 +74,23 @@ router.post('/masters', async (req, res) => {
 router.put('/masters/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
-    if (!name || !name.trim()) return res.status(400).json({ error: 'Имя мастера обязательно' });
-    const trimmed = name.trim();
-    if (trimmed.length > 100) return res.status(400).json({ error: 'Имя слишком длинное' });
+    const { name, avatar_url, description, speciality } = req.body;
+    if (name !== undefined) {
+      if (!name || !name.trim()) return res.status(400).json({ error: 'Имя мастера обязательно' });
+      if (name.trim().length > 100) return res.status(400).json({ error: 'Имя слишком длинное' });
+    }
 
-    const master = await db.queryOne('SELECT id FROM masters WHERE id = $1', [id]);
+    const master = await db.queryOne('SELECT id, name, avatar_url, description, speciality FROM masters WHERE id = $1', [id]);
     if (!master) return res.status(404).json({ error: 'Мастер не найден' });
 
-    await db.runSql('UPDATE masters SET name = $1 WHERE id = $2', [trimmed, id]);
-    res.json({ success: true, name: trimmed });
+    const newName = name !== undefined ? name.trim() : master.name;
+    const newAvatar = avatar_url !== undefined ? avatar_url : master.avatar_url;
+    const newDesc = description !== undefined ? description : master.description;
+    const newSpec = speciality !== undefined ? speciality : master.speciality;
+
+    await db.runSql('UPDATE masters SET name = $1, avatar_url = $2, description = $3, speciality = $4 WHERE id = $5',
+      [newName, newAvatar || '', newDesc || '', newSpec || '', id]);
+    res.json({ success: true, id: parseInt(id), name: newName, avatar_url: newAvatar || '', description: newDesc || '', speciality: newSpec || '' });
   } catch (err) {
     console.error('PUT /api/admin/masters:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -108,7 +115,7 @@ router.delete('/masters/:id', async (req, res) => {
 
 router.get('/services', async (req, res) => {
   try {
-    const services = await db.queryAll('SELECT id, name, price, duration_minutes FROM services ORDER BY id');
+    const services = await db.queryAll('SELECT id, name, price, duration_minutes, icon, description FROM services ORDER BY id');
     res.json(services);
   } catch (err) {
     console.error('GET /api/admin/services:', err.message);
@@ -118,7 +125,7 @@ router.get('/services', async (req, res) => {
 
 router.post('/services', async (req, res) => {
   try {
-    const { name, price, duration_minutes } = req.body;
+    const { name, price, duration_minutes, icon, description } = req.body;
 
     if (!name || !name.trim()) return res.status(400).json({ error: 'Название услуги обязательно' });
     const trimmed = name.trim();
@@ -131,11 +138,11 @@ router.post('/services', async (req, res) => {
     if (isNaN(durInt) || durInt < 15 || durInt > 480) return res.status(400).json({ error: 'Длительность должна быть от 15 до 480 минут' });
 
     const result = await db.runSql(
-      'INSERT INTO services (name, price, duration_minutes) VALUES ($1, $2, $3) RETURNING id',
-      [trimmed, priceInt, durInt]
+      'INSERT INTO services (name, price, duration_minutes, icon, description) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [trimmed, priceInt, durInt, icon || '', description || '']
     );
     const id = result.rows && result.rows[0] ? result.rows[0].id : null;
-    res.status(201).json({ id, name: trimmed, price: priceInt, duration_minutes: durInt });
+    res.status(201).json({ id, name: trimmed, price: priceInt, duration_minutes: durInt, icon: icon || '', description: description || '' });
   } catch (err) {
     console.error('POST /api/admin/services:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -145,7 +152,7 @@ router.post('/services', async (req, res) => {
 router.put('/services/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, duration_minutes } = req.body;
+    const { name, price, duration_minutes, icon, description } = req.body;
 
     const service = await db.queryOne('SELECT id FROM services WHERE id = $1', [id]);
     if (!service) return res.status(404).json({ error: 'Услуга не найдена' });
@@ -163,13 +170,16 @@ router.put('/services/:id', async (req, res) => {
       if (isNaN(d) || d < 15 || d > 480) return res.status(400).json({ error: 'Длительность должна быть от 15 до 480 минут' });
     }
 
-    const current = await db.queryOne('SELECT name, price, duration_minutes FROM services WHERE id = $1', [id]);
+    const current = await db.queryOne('SELECT name, price, duration_minutes, icon, description FROM services WHERE id = $1', [id]);
     const newName = name !== undefined ? name.trim() : current.name;
     const newPrice = price !== undefined ? parseInt(price, 10) : current.price;
     const newDur = duration_minutes !== undefined ? parseInt(duration_minutes, 10) : current.duration_minutes;
+    const newIcon = icon !== undefined ? icon : current.icon;
+    const newDesc = description !== undefined ? description : current.description;
 
-    await db.runSql('UPDATE services SET name = $1, price = $2, duration_minutes = $3 WHERE id = $4', [newName, newPrice, newDur, id]);
-    res.json({ success: true, id: parseInt(id), name: newName, price: newPrice, duration_minutes: newDur });
+    await db.runSql('UPDATE services SET name = $1, price = $2, duration_minutes = $3, icon = $4, description = $5 WHERE id = $6',
+      [newName, newPrice, newDur, newIcon || '', newDesc || '', id]);
+    res.json({ success: true, id: parseInt(id), name: newName, price: newPrice, duration_minutes: newDur, icon: newIcon || '', description: newDesc || '' });
   } catch (err) {
     console.error('PUT /api/admin/services:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -1,0 +1,6 @@
+ALTER TABLE masters ADD COLUMN avatar_url TEXT DEFAULT '';
+ALTER TABLE masters ADD COLUMN description TEXT DEFAULT '';
+ALTER TABLE masters ADD COLUMN speciality TEXT DEFAULT '';
+
+ALTER TABLE services ADD COLUMN icon TEXT DEFAULT '';
+ALTER TABLE services ADD COLUMN description TEXT DEFAULT '';

@@ -60,7 +60,7 @@ function parseTime(v) { return String(v).substring(0, 5); }
 
 router.get('/masters', async (req, res) => {
   try {
-    const masters = await db.queryAll(`SELECT id, name FROM masters WHERE ${activeWhere()}`);
+    const masters = await db.queryAll(`SELECT id, name, avatar_url, description, speciality FROM masters WHERE ${activeWhere()}`);
     res.json(masters);
   } catch (err) {
     console.error('GET /api/masters:', err.message);
@@ -70,7 +70,7 @@ router.get('/masters', async (req, res) => {
 
 router.get('/services', async (req, res) => {
   try {
-    const services = await db.queryAll('SELECT id, name, price, duration_minutes FROM services');
+    const services = await db.queryAll('SELECT id, name, price, duration_minutes, icon, description FROM services');
     res.json(services);
   } catch (err) {
     console.error('GET /api/services:', err.message);

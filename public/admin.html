@@ -42,9 +42,24 @@
       <section class="admin-section">
         <h2>&#9787; Мастера</h2>
         <div id="mastersList"></div>
-        <div class="admin-form-row">
-          <input type="text" id="newMasterName" placeholder="Имя нового мастера">
-          <button class="btn btn-primary" id="addMasterBtn">Добавить</button>
+        <div class="admin-master-add-form">
+          <div class="form-group">
+            <label>Имя мастера</label>
+            <input type="text" id="newMasterName" placeholder="Имя нового мастера">
+          </div>
+          <div class="form-group">
+            <label>Специальность</label>
+            <input type="text" id="newMasterSpec" placeholder="Например: Мастер маникюра">
+          </div>
+          <div class="form-group">
+            <label>Описание</label>
+            <input type="text" id="newMasterDesc" placeholder="Кратко о мастере">
+          </div>
+          <div class="form-group">
+            <label>Фото (URL)</label>
+            <input type="text" id="newMasterAvatar" placeholder="https://images.unsplash.com/...">
+          </div>
+          <button class="btn btn-primary btn-block" id="addMasterBtn">Добавить мастера</button>
         </div>
       </section>
 
@@ -54,11 +69,9 @@
         <div id="servicesList"></div>
         <div class="admin-service-form" id="serviceForm">
           <input type="hidden" id="serviceEditId">
-          <div class="admin-row">
-            <div class="form-group">
-              <label>Название</label>
-              <input type="text" id="serviceName" placeholder="Название услуги">
-            </div>
+          <div class="form-group">
+            <label>Название</label>
+            <input type="text" id="serviceName" placeholder="Название услуги">
           </div>
           <div class="admin-row">
             <div class="form-group">
@@ -69,6 +82,14 @@
               <label>Длительность (мин)</label>
               <input type="number" id="serviceDuration" placeholder="60" min="15" max="480" step="15">
             </div>
+          </div>
+          <div class="form-group">
+            <label>Иконка (эмодзи)</label>
+            <input type="text" id="serviceIcon" placeholder="Например: ✂️ 💅 💆 🧖">
+          </div>
+          <div class="form-group">
+            <label>Описание услуги</label>
+            <input type="text" id="serviceDesc" placeholder="Кратко об услуге">
           </div>
           <div class="nav-btns">
             <button class="btn btn-secondary" id="serviceCancelBtn" style="display:none">Отмена</button>

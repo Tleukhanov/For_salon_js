@@ -81,6 +81,17 @@ async function runMigrationsPg() {
 
 /* ===================== TABLES (SQLITE) ===================== */
 
+function sqliteHasColumn(table, col) {
+  const rows = queryAllSqlite(`PRAGMA table_info(${table})`);
+  return rows.some(r => r.name === col);
+}
+
+function sqliteAddColumn(table, col, type, def) {
+  if (!sqliteHasColumn(table, col)) {
+    sqlDb.run(`ALTER TABLE ${table} ADD COLUMN ${col} ${type} DEFAULT ${def}`);
+  }
+}
+
 function createTablesSqlite() {
   sqlDb.run(`CREATE TABLE IF NOT EXISTS masters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,6 +124,11 @@ function createTablesSqlite() {
     end_time TEXT NOT NULL,
     reason TEXT
   )`);
+  sqliteAddColumn('masters', 'avatar_url', 'TEXT', "''");
+  sqliteAddColumn('masters', 'description', 'TEXT', "''");
+  sqliteAddColumn('masters', 'speciality', 'TEXT', "''");
+  sqliteAddColumn('services', 'icon', 'TEXT', "''");
+  sqliteAddColumn('services', 'description', 'TEXT', "''");
 }
 
 /* ===================== SAVE (SQLITE) ===================== */

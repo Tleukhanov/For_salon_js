@@ -13,46 +13,81 @@
   </div>
 
   <div class="container">
+
     <a href="/" class="back-link">&larr; На главную</a>
 
-    <div class="steps-header" id="stepsHeader">
-      <div class="step-dot active" data-step="1"></div>
-      <div class="step-dot" data-step="2"></div>
-      <div class="step-dot" data-step="3"></div>
-      <div class="step-dot" data-step="4"></div>
+    <!-- Progress bar with labels -->
+    <div class="steps-progress" id="stepsHeader">
+      <div class="step-progress-item active" data-step="1">
+        <div class="step-circle">1</div>
+        <span class="step-label">Мастер</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-progress-item" data-step="2">
+        <div class="step-circle">2</div>
+        <span class="step-label">Услуга</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-progress-item" data-step="3">
+        <div class="step-circle">3</div>
+        <span class="step-label">Дата</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-progress-item" data-step="4">
+        <div class="step-circle">4</div>
+        <span class="step-label">Контакты</span>
+      </div>
     </div>
 
     <div class="error-msg" id="errorMsg"></div>
 
     <!-- Step 1: Мастер -->
     <div class="step-panel active" data-step="1">
-      <h2>Выберите мастера</h2>
-      <p class="step-hint">Наши специалисты подберут идеальный образ для вас</p>
+      <div class="step-hero">
+        <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
+        <div class="step-hero-overlay">
+          <span class="step-hero-icon">&#128136;</span>
+          <h2>Выберите мастера</h2>
+          <p class="step-hint">Наши специалисты подберут идеальный образ для вас</p>
+        </div>
+      </div>
       <div class="loading" id="mastersLoading">Загрузка мастеров...</div>
       <div class="cards" id="mastersList"></div>
       <div class="nav-btns">
-        <button class="btn btn-primary btn-block" id="toStep2" disabled>Далее</button>
+        <button class="btn btn-primary btn-block btn-glow" id="toStep2" disabled>Далее &rarr;</button>
       </div>
     </div>
 
     <!-- Step 2: Услуга -->
     <div class="step-panel" data-step="2">
-      <h2>Выберите услугу</h2>
-      <p class="step-hint">Широкий спектр процедур для вашего совершенства</p>
+      <div class="step-hero">
+        <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
+        <div class="step-hero-overlay">
+          <span class="step-hero-icon">&#10024;</span>
+          <h2>Выберите услугу</h2>
+          <p class="step-hint">Широкий спектр процедур для вашего совершенства</p>
+        </div>
+      </div>
       <div class="loading" id="servicesLoading">Загрузка услуг...</div>
       <div class="cards" id="servicesList"></div>
       <div class="nav-btns">
-        <button class="btn btn-secondary" id="backTo1">Назад</button>
-        <button class="btn btn-primary" id="toStep3" disabled>Далее</button>
+        <button class="btn btn-secondary" id="backTo1">&larr; Назад</button>
+        <button class="btn btn-primary btn-glow" id="toStep3" disabled>Далее &rarr;</button>
       </div>
     </div>
 
     <!-- Step 3: Дата и время -->
     <div class="step-panel" data-step="3">
-      <h2>Выберите дату и время</h2>
-      <p class="step-hint">Найдите удобный слот в календаре</p>
+      <div class="step-hero">
+        <img src="https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
+        <div class="step-hero-overlay">
+          <span class="step-hero-icon">&#128197;</span>
+          <h2>Выберите дату и время</h2>
+          <p class="step-hint">Найдите удобный слот в календаре</p>
+        </div>
+      </div>
 
-      <button class="btn btn-accent btn-block btn-nearest" id="nearestSlotBtn">
+      <button class="btn btn-accent btn-block btn-nearest btn-shimmer" id="nearestSlotBtn">
         <span class="btn-nearest-icon">&#9889;</span>
         Ближайшее свободное время
       </button>
@@ -83,38 +118,51 @@
       </div>
 
       <div class="nav-btns">
-        <button class="btn btn-secondary" id="backTo2">Назад</button>
-        <button class="btn btn-primary" id="toStep4" disabled>Далее</button>
+        <button class="btn btn-secondary" id="backTo2">&larr; Назад</button>
+        <button class="btn btn-primary btn-glow" id="toStep4" disabled>Далее &rarr;</button>
       </div>
     </div>
 
     <!-- Step 4: Контактные данные -->
     <div class="step-panel" data-step="4">
-      <h2>Ваши контакты</h2>
+      <div class="step-hero step-hero-short">
+        <img src="https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
+        <div class="step-hero-overlay">
+          <span class="step-hero-icon">&#9993;</span>
+          <h2>Ваши контакты</h2>
+          <p class="step-hint">Осталось совсем немного!</p>
+        </div>
+      </div>
       <div class="booking-summary" id="bookingSummary"></div>
       <div class="form-group">
-        <label for="clientName">Имя</label>
-        <input type="text" id="clientName" placeholder="Введите ваше имя">
+        <label for="clientName">&#128100; Имя</label>
+        <input type="text" id="clientName" placeholder="Как к вам обращаться?">
       </div>
       <div class="form-group">
-        <label for="clientPhone">Телефон</label>
+        <label for="clientPhone">&#128222; Телефон</label>
         <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
       </div>
       <div class="nav-btns">
-        <button class="btn btn-secondary" id="backTo3">Назад</button>
-        <button class="btn btn-primary" id="confirmBooking" disabled>Подтвердить запись</button>
+        <button class="btn btn-secondary" id="backTo3">&larr; Назад</button>
+        <button class="btn btn-primary btn-glow" id="confirmBooking" disabled>&#10003; Подтвердить запись</button>
       </div>
     </div>
 
     <!-- Step 5: Успех -->
     <div class="step-panel" data-step="5">
       <div class="success-screen">
+        <div class="success-sparkles">
+          <span class="sparkle">&#10024;</span><span class="sparkle">&#10024;</span><span class="sparkle">&#10024;</span>
+        </div>
         <div class="success-circle">
           <div class="success-icon">&#10003;</div>
         </div>
-        <h2>Вы записаны!</h2>
+        <h2 class="success-title">Вы записаны!</h2>
+        <p class="success-subtitle">Ждём вас в салоне красоты Бьюти</p>
         <div class="success-details" id="successDetails"></div>
-        <button class="btn btn-danger btn-block" id="cancelBookingBtn">Отменить запись</button>
+        <div class="success-footer">
+          <button class="btn btn-danger btn-block" id="cancelBookingBtn">Отменить запись</button>
+        </div>
       </div>
     </div>
 
@@ -125,10 +173,11 @@
           <div class="success-icon">&#10005;</div>
         </div>
         <h2>Запись отменена</h2>
-        <p style="color:var(--text-light);margin-bottom:24px">Если хотите, можете записаться снова</p>
-        <a href="/booking.html" class="btn btn-primary btn-block">Записаться снова</a>
+        <p class="success-subtitle">Если хотите, можете записаться снова</p>
+        <a href="/booking.html" class="btn btn-primary btn-block btn-glow">Записаться снова</a>
       </div>
     </div>
+
   </div>
 
   <script src="/js/booking.js"></script>
