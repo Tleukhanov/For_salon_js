@@ -4,5 +4,6 @@ node_modules/
 _test*.js
 _seed*.js
 seed.js
+.DEVELOPER.md
 server_out.txt
 server_err.txt
