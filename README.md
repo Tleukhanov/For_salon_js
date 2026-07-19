@@ -8,12 +8,14 @@
 ![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-sql.js%20fallback-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![HTML5](https://img.shields.io/badge/HTML5-Clean-semantic-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-Animations-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![Vanilla JS](https://img.shields.io/badge/JavaScript-Vanilla-F7DF1E?style=for-the-badge&logo=javascript&logoColor=white)
 
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-51%2F51-brightgreen?style=for-the-badge)
 
 </div>
 
@@ -21,14 +23,33 @@
 
 ## ✨ Возможности
 
-* **Онлайн-запись с пошаговым мастером** — удобный 4-шаговый визард: мастер → услуга → дата/время → контакты
-* **Календарь занятости** — компактный месяц-календарь с цветовой индикацией доступных/занятых дней
-* **Ближайшее свободное время** — одна кнопка находит ближайший слот в горизонте 60 дней
-* **Учёт длительности услуг** — слоты генерируются с учётом времени процедуры, пересечения исключены
-* **Полноценная админ-панель** — управление мастерами, услугами, блокировками и записями
-* **История и предстоящие записи** — разделение на вкладки: админ видит будущее по умолчанию
-* **Премиальный дизайн** — тёплая кремово-розовая палитра, анимации, галерея из Unsplash
-* **Полная адаптивность** — корректно работает на мобильных, планшетах и десктопе
+### Запись клиентов
+* **Пошаговый визард** — 4 шага: мастер → услуга → дата/время → контакты
+* **Аватары мастеров** — фото или инициалы, специальность и описание
+* **Иконки услуг** — эмодзи-иконки, полоска длительности, описание
+* **Календарь занятости** — месяц-календарь с цветовой индикацией (зелёный/красный)
+* **Ближайшее свободное время** — один клик находит слот в горизонте 60 дней
+* **Учёт длительности** — слоты генерируются с учётом времени процедуры
+* **Стиль сводки** — запись оформлена как «билет» с иконками
+* **WhatsApp** — кнопка поделиться записью (номер салона: +7 775 696 10 05)
+* **Календарь (.ics)** — скачай файл для Google/Apple Calendar
+* **Анимации успеха** — конфетти + sparkle-звёздочки при подтверждении
+
+### Админ-панель
+* **Мастера** — CRUD + модальное окно редактирования с фото/описанием/специальностью
+* **Услуги** — CRUD + иконки (эмодзи) и описания
+* **Блокировки** — заблокируй время мастера на определённую дату
+* **Записи** — вкладки «Предстоящие» / «История»
+* **Сессия** — пароль-защита через express-session
+
+### Дизайн
+* **Hero-баннеры** — фото Unsplash с градиентным оверлеем на каждом шаге
+* **Прогресс-бар** — кружки с номерами и подписями шагов
+* **Карточки мастеров** — аватар + специальность + описание
+* **Карточки услуг** — эмодзи + полоска длительности + цена
+* **Glow + Shimmer** — эффекты свечения и блика на кнопках
+* **Адаптивность** — мобильные, планшеты, десктоп
+* **prefers-reduced-motion** — уважает настройки доступности
 
 ---
 
@@ -38,10 +59,10 @@
 |---|---|
 | Язык | JavaScript (Node.js 22+) |
 | Фреймворк | [Express.js](https://expressjs.com/) v4.x |
-| База данных | PostgreSQL ( продакшен ) / SQLite sql.js ( локальная разработка ) |
-| Фронтенд | Vanilla HTML5 / CSS3 / JS |
+| База данных | PostgreSQL 16 ( продакшен ) / SQLite sql.js ( локально ) |
+| Фронтенд | Vanilla HTML5 / CSS3 / JS (без фреймворков) |
 | Аутентификация | express-session + cookie-parser |
-| Деплой | Railway / VPS / Docker |
+| Деплой | Docker / VPS (pm2) |
 
 ---
 
@@ -81,9 +102,9 @@ docker compose up -d
 
 5. **Открой в браузере:**
    ```
-   http://localhost:3000          — главная страница
-   http://localhost:3000/booking.html  — онлайн-запись
-   http://localhost:3000/admin.html    — панель администратора
+   http://localhost:3000              — главная страница
+   http://localhost:3000/booking.html — онлайн-запись
+   http://localhost:3000/admin.html   — панель администратора
    ```
 
 ---
@@ -92,28 +113,29 @@ docker compose up -d
 
 ```
 forsalon/
-├── server.js               # Точка входа, Express-сервер
+├── server.js                  # Точка входа, Express-сервер
 ├── db/
-│   ├── database.js         # Двойной движок PG + SQLite, миграции
+│   ├── database.js            # Двойной движок PG + SQLite, миграции
 │   └── migrations/
-│       └── 001_init.sql    # PostgreSQL схема
+│       ├── 001_init.sql       # Схема: masters, services, bookings, unavailability
+│       └── 002_*.sql          # Добавление avatar_url, description, icon
 ├── middleware/
-│   └── auth.js             # requireAdmin middleware
+│   └── auth.js                # requireAdmin middleware
 ├── routes/
-│   ├── public.js           # Публичные API: слоты, запись, календарь
-│   └── admin.js            # Админ API: CRUD, авторизация, фильтрация
+│   ├── public.js              # Публичные API: слоты, запись, календарь
+│   └── admin.js               # Админ API: CRUD, авторизация, фильтрация
 ├── public/
-│   ├── index.html          # Hero-страница с галереей
-│   ├── booking.html        # Пошаговая запись с календарём
-│   ├── admin.html          # Панель администратора
-│   ├── css/style.css       # Полный дизайн + анимации
-│   ├── js/booking.js       # Логика записи (календарь, слоты, конфетти)
-│   └── js/admin.js         # Логика админки (CRUD, вкладки)
-├── Dockerfile              # Docker образ приложения
-├── docker-compose.yml      # Docker Compose: app + PostgreSQL
-├── .env                    # Секреты (не коммитится)
+│   ├── index.html             # Hero-страница с галереей
+│   ├── booking.html           # Пошаговая запись с hero-баннерами
+│   ├── admin.html             # Панель администратора с модалками
+│   ├── css/style.css          # Полный дизайн + анимации
+│   ├── js/booking.js          # Логика записи (wizard, календарь, WhatsApp, .ics)
+│   └── js/admin.js            # Логика админки (CRUD, модалки, табы)
+├── Dockerfile                 # Docker образ приложения
+├── docker-compose.yml         # Docker Compose: app + PostgreSQL
+├── .env                       # Секреты (не коммитится)
 ├── package.json
-└── salon.db                # SQLite база данных (автосоздание, только локально)
+└── salon.db                   # SQLite база данных (автосоздание, только локально)
 ```
 
 ---
@@ -124,43 +146,60 @@ forsalon/
 
 | Метод | Путь | Описание |
 |---|---|---|
-| `GET` | `/api/masters` | Список активных мастеров |
-| `GET` | `/api/services` | Список услуг (название, цена, длительность) |
-| `GET` | `/api/slots` | Свободные слоты по дате, мастеру и услуге |
+| `GET` | `/api/masters` | Мастера с avatar_url, speciality, description |
+| `GET` | `/api/services` | Услуги с icon, description, ценой и длительностью |
+| `GET` | `/api/slots` | Свободные слоты (master_id, date, service_id) |
 | `GET` | `/api/availability` | Доступность дней (календарь) |
 | `GET` | `/api/nearest-slot` | Ближайший свободный слот (horizon 60 дней) |
-| `POST` | `/api/bookings` | Создание записи |
+| `POST` | `/api/bookings` | Создание записи (возвращает cancel_token) |
 | `DELETE` | `/api/bookings/:token` | Отмена записи по токену |
 
-### Админские (защищены)
+### Админские (защищены session-куки)
 
 | Метод | Путь | Описание |
 |---|---|---|
 | `POST` | `/api/admin/login` | Вход по паролю |
 | `POST` | `/api/admin/logout` | Выход |
 | `GET` | `/api/admin/masters` | Все мастера (включая неактивных) |
-| `POST` | `/api/admin/masters` | Добавить мастера |
-| `PUT` | `/api/admin/masters/:id` | Редактировать имя |
+| `POST` | `/api/admin/masters` | Добавить мастера (name, avatar_url, description, speciality) |
+| `PUT` | `/api/admin/masters/:id` | Редактировать мастера (все поля) |
 | `DELETE` | `/api/admin/masters/:id` | Деактивировать (мягкое удаление) |
 | `GET` | `/api/admin/services` | Все услуги |
-| `POST` | `/api/admin/services` | Добавить услугу |
+| `POST` | `/api/admin/services` | Добавить услугу (name, price, duration, icon, description) |
 | `PUT` | `/api/admin/services/:id` | Редактировать услугу |
 | `DELETE` | `/api/admin/services/:id` | Удалить (с защитой от наличия записей) |
 | `GET` | `/api/admin/bookings` | Записи с фильтром `upcoming` / `history` |
-| `POST` | `/api/admin/unavailability` | Блокировка времени |
-| `GET` | `/api/admin/unavailability` | Список блокировок мастера |
+| `POST` | `/api/admin/unavailability` | Блокировка времени мастера |
+| `GET` | `/api/admin/unavailability` | Список блокировок |
 | `DELETE` | `/api/admin/unavailability/:id` | Снять блокировку |
 
 ---
 
 ## 🔒 Безопасность
 
-* **Серверная валидация дат** — прошедшие даты и время отклоняются API, не только на клиенте
-* **Буфер 30 минут** — нельзя записаться на время, которое уже прошло сегодня
-* **Race condition protection** — повторная проверка доступности перед INSERT
-* **Safe DOM rendering** — все пользовательские данные рендерятся через `textContent` (защита XSS)
-* **Мягкое удаление** — мастера деактивируются, история записей сохраняется
-* **Защита услуг** — нельзя удалить услугу, если она есть в записях клиентов
+* **XSS** — все данные рендерятся через `textContent` / `escapeHtml()`
+* **SQL-инъекции** — параметризованные запросы ($1/$2 для PG, ? для SQLite)
+* **Серверная валидация дат** — прошедшие даты и время отклоняются API
+* **Буфер 30 минут** — нельзя записаться на прошедшее время сегодня
+* **Race condition protection** — проверка доступности перед INSERT
+* **Мягкое удаление** — мастера деактивируются, история сохраняется
+* **Защита услуг** — нельзя удалить услугу, если она есть в записях
+* **Dual-DB** — `convertParams()` переводит PG-синтаксис в SQLite
+
+---
+
+## 🧪 Тестирование
+
+```bash
+# Запусти сервер в одном терминале:
+node server.js
+
+# В другом:
+node _test.js          # 29 тестов (слоты, запись, админ CRUD)
+node _test_fields.js   # 22 теста (аватары, иконки, описания)
+```
+
+Для seed данных: `node _seed_api.js`
 
 ---
 
@@ -168,15 +207,15 @@ forsalon/
 
 | Приоритет | Фича | Описание |
 |---|---|---|
-| 🔴 Высокий | **SMS / Email уведомления** | Напоминание за 1 час до записи через Twilio / SendGrid |
+| 🔴 Высокий | **WhatsApp уведомления** | Подтверждение + напоминание за 1 час (WhatsApp Cloud API) |
 | 🔴 Высокий | **Личный кабинет клиента** | Регистрация, история записей, повторная запись |
-| 🟡 Средний | **Онлайн-оплата** | Интеграция с ЮKassa / Stripe |
+| 🟡 Средний | **SMS-авторизация** | Вход по SMS-коду (Twilio / SMS.ru) |
+| 🟡 Средний | **Онлайн-оплата** | ЮKassa / Stripe |
 | 🟡 Средний | **Мультифилиал** | Несколько салонов с отдельными расписаниями |
-| 🟡 Средний | **Фото галерея работ** | Загрузка работ мастерами в портфолио |
-| 🟡 Средний | **Отзывы и рейтинги** | Оценка мастеров и процедур после визита |
-| 🟢 Низкий | **Telegram-бот** | Запись через Telegram по аналогии с вебом |
+| 🟡 Средний | **Отзывы и рейтинги** | Оценка мастеров и процедур |
+| 🟢 Низкий | **Telegram-бот** | Запись через Telegram |
 | 🟢 Низкий | **Аналитика** | Графики загрузки, популярные услуги, выручка |
-| 🟢 Низкий | **Промокоды и акции** | Скидочные системы для постоянных клиентов |
+| 🟢 Низкий | **Промокоды** | Скидочные системы |
 
 ---
 
@@ -184,33 +223,20 @@ forsalon/
 
 ### Docker (рекомендуется)
 ```bash
-# На сервере
 git clone https://github.com/Tleukhanov/forsalon.git
 cd forsalon
 # Настрой пароли в docker-compose.yml или .env
 docker compose up -d
 ```
 
-### VPS (DigitalOcean / Hetzner)
+### VPS (pm2)
 ```bash
-# На сервере
 git clone https://github.com/Tleukhanov/forsalon.git
 cd forsalon
 npm install
 npm install -g pm2
 pm2 start server.js --name forsalon
-pm2 save
-pm2 startup
-```
-
-### Docker (standalone)
-```bash
-docker build -t forsalon .
-docker run -d -p 3000:3000 \
-  -e DATABASE_URL=postgres://user:pass@host:5432/db \
-  -e ADMIN_PASSWORD=secret \
-  -e SESSION_SECRET=secret \
-  --name forsalon forsalon
+pm2 save && pm2 startup
 ```
 
 ---
@@ -219,7 +245,7 @@ docker run -d -p 3000:3000 \
 
 * **Разработчик:** Tleukhanov Yeraly
 * **Роль:** Full-Stack Developer
-* **Фокус:** Backend (Node.js, Express), Базы данных, Адаптивная вёрстка, UI/UX
+* **Фокус:** Backend (Node.js, Express), Базы данных, UI/UX
 * **GitHub:** [@Tleukhanov](https://github.com/Tleukhanov)
 
 ---
