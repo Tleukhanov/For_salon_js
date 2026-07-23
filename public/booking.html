@@ -20,12 +20,12 @@
     <div class="steps-progress" id="stepsHeader">
       <div class="step-progress-item active" data-step="1">
         <div class="step-circle">1</div>
-        <span class="step-label">Мастер</span>
+        <span class="step-label">Услуга</span>
       </div>
       <div class="step-line"></div>
       <div class="step-progress-item" data-step="2">
         <div class="step-circle">2</div>
-        <span class="step-label">Услуга</span>
+        <span class="step-label">Мастер</span>
       </div>
       <div class="step-line"></div>
       <div class="step-progress-item" data-step="3">
@@ -41,25 +41,8 @@
 
     <div class="error-msg" id="errorMsg"></div>
 
-    <!-- Step 1: Мастер -->
+    <!-- Step 1: Услуга -->
     <div class="step-panel active" data-step="1">
-      <div class="step-hero">
-        <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
-        <div class="step-hero-overlay">
-          <span class="step-hero-icon">&#128136;</span>
-          <h2>Выберите мастера</h2>
-          <p class="step-hint">Наши специалисты подберут идеальный образ для вас</p>
-        </div>
-      </div>
-      <div class="loading" id="mastersLoading">Загрузка мастеров...</div>
-      <div class="cards" id="mastersList"></div>
-      <div class="nav-btns">
-        <button class="btn btn-primary btn-block btn-glow" id="toStep2" disabled>Далее &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Step 2: Услуга -->
-    <div class="step-panel" data-step="2">
       <div class="step-hero">
         <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
         <div class="step-hero-overlay">
@@ -70,6 +53,23 @@
       </div>
       <div class="loading" id="servicesLoading">Загрузка услуг...</div>
       <div class="cards" id="servicesList"></div>
+      <div class="nav-btns">
+        <button class="btn btn-primary btn-block btn-glow" id="toStep2" disabled>Далее &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Мастер -->
+    <div class="step-panel" data-step="2">
+      <div class="step-hero">
+        <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80" alt="" class="step-hero-img" aria-hidden="true">
+        <div class="step-hero-overlay">
+          <span class="step-hero-icon">&#128136;</span>
+          <h2>Выберите мастера</h2>
+          <p class="step-hint">Наши специалисты подберут идеальный образ для вас</p>
+        </div>
+      </div>
+      <div class="loading" id="mastersLoading">Загрузка мастеров...</div>
+      <div class="cards" id="mastersList"></div>
       <div class="nav-btns">
         <button class="btn btn-secondary" id="backTo1">&larr; Назад</button>
         <button class="btn btn-primary btn-glow" id="toStep3" disabled>Далее &rarr;</button>

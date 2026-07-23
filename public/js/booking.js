@@ -172,7 +172,7 @@ async function loadMasters() {
         state.date = '';
         state.time = '';
         state.availabilityCache = {};
-        $('#toStep2').disabled = false;
+        $('#toStep3').disabled = false;
       });
     });
   } catch (err) {
@@ -183,9 +183,9 @@ async function loadMasters() {
 }
 
 $('#toStep2').addEventListener('click', () => {
-  if (state.masterId) {
+  if (state.serviceId) {
     goToStep(2);
-    loadServices();
+loadServices();
   }
 });
 
@@ -264,7 +264,7 @@ async function loadServices() {
         state.date = '';
         state.time = '';
         state.availabilityCache = {};
-        $('#toStep3').disabled = false;
+        $('#toStep2').disabled = false;
       });
     });
     if (state.serviceId) {
@@ -272,7 +272,7 @@ async function loadServices() {
       if (selected) {
         selected.classList.add('selected');
         selected.querySelector('input').checked = true;
-        $('#toStep3').disabled = false;
+        $('#toStep2').disabled = false;
       }
     }
   } catch (err) {
@@ -283,7 +283,7 @@ async function loadServices() {
 }
 
 $('#toStep3').addEventListener('click', () => {
-  if (state.serviceId) {
+  if (state.masterId) {
     goToStep(3);
     initCalendar();
   }
