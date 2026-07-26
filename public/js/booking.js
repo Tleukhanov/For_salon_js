@@ -185,7 +185,7 @@ async function loadMasters() {
 $('#toStep2').addEventListener('click', () => {
   if (state.serviceId) {
     goToStep(2);
-loadServices();
+    loadMasters();
   }
 });
 
@@ -760,4 +760,4 @@ $('#cancelBookingBtn').addEventListener('click', async () => {
   }
 });
 
-loadMasters();
+loadServices();
