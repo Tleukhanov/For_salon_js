@@ -30,6 +30,11 @@ html {
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   background: var(--bg);
@@ -1706,6 +1711,71 @@ body {
   .gallery-track img {
     width: 150px;
     height: 100px;
+  }
+}
+
+/* ==================== RESPONSIVE: SMALL PHONES ==================== */
+@media (max-width: 560px) {
+  .hero-features {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 32px 18px;
+  }
+
+  .hero-img {
+    width: 180px;
+    height: 240px;
+  }
+
+  .hero h1 {
+    font-size: 2.1rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 26px;
+  }
+
+  .success-actions {
+    flex-direction: column;
+  }
+
+  .success-actions .btn {
+    width: 100%;
+  }
+
+  .services-preview {
+    padding: 40px 16px;
+  }
+
+  .services-preview h2 {
+    font-size: 1.5rem;
+  }
+
+  .services-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .admin-login-card {
+    padding: 24px 18px;
+    margin-top: 40px;
+  }
+
+  .admin-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .admin-tab {
+    flex: 1;
+    padding: 10px 8px;
+    text-align: center;
   }
 }
 
